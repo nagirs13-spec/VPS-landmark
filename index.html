@@ -147,7 +147,7 @@
     <div id="map"><div id="world"><img id="planImg" alt=""><svg id="ov"></svg></div></div>
     <div id="scan"><div class="g"></div><div class="beam"></div><div class="lb">SCANNING · 屋内測位中</div></div>
     <div class="hud">
-      <div class="glass dcard"><div class="lbl">DESTINATION</div><div class="dn" id="hudDest">-</div><div class="meta" id="hudMeta"></div></div>
+      <div class="glass dcard"><div class="lbl" id="hudLbl">DESTINATION</div><div class="dn" id="hudDest">-</div><div class="meta" id="hudMeta"></div></div>
       <div class="floors" id="floorBtns"></div>
     </div>
     <div class="glass sheet" id="sheet">
@@ -171,7 +171,7 @@
   <section class="screen" id="admin" hidden>
     <div class="bar" style="padding-top:calc(env(safe-area-inset-top) + 8px)">
       <button data-at="dest">目的地</button><button data-at="start">出発地点(紙)</button><button data-at="net">通路</button>
-      <button data-at="tag">目印</button><button data-at="th">しきい値</button><button data-at="log">ログ</button><button data-at="exp">書き出し</button><button id="admClose">閉じる</button>
+      <button data-at="tag">目印</button><button data-at="th">しきい値</button><button data-at="log">ログ</button><button data-at="exp">書き出し</button><button data-at="demo">デモ</button><button id="admClose">閉じる</button>
     </div>
     <div class="bar" style="padding-top:6px"><span id="admFloors" style="display:flex;gap:6px"></span><span class="sub" id="admHint" style="align-self:center"></span></div>
     <div id="amap" style="position:absolute;left:0;right:0;bottom:0;overflow:hidden;touch-action:none;background:#f4f4f2"><div id="aworld" style="position:absolute;left:0;top:0;transform-origin:0 0"><img id="aplan" alt="" style="display:block;pointer-events:none"><svg id="aov" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none"></svg></div></div>
@@ -417,6 +417,11 @@ async function locate(blob){
   if(use) return {ok:true, method:"tag", floor:use.floor, px:use.px, dir:Math.round(use.dir), conf:1, inliers:"", top:[], tag:use, tagsSeen:seen};
   const r=await estimate(blob); return {...r, method:"vps", tagsSeen:seen};
 }
+function demoOn(){ return !!lsGet("vpslmguide_demo",false); }
+// デモモード：カメラ直接起動（capture）を外し、写真ライブラリから選べるようにする
+function applyDemo(){ const on=demoOn();
+  for(const id of ["camIn","tgFile"]){ const e=$(id); if(!e) continue; if(on) e.removeAttribute("capture"); else e.setAttribute("capture","environment"); }
+  const l=$("hudLbl"); if(l){ l.textContent=on?"DEMO · DESTINATION":"DESTINATION"; l.style.color=on?"#ffb86b":""; } }
 function diagOn(){ return !!lsGet("vpslmguide_diag",false); }
 function diagText(res){
   const a=[];
@@ -561,7 +566,7 @@ function drawGuide(){
 function setInstr(icon,text,sub,cls){ $("instrIcon").innerHTML=ICON[icon]; $("instrText").textContent=text; $("instrSub").textContent=sub||""; const sh=$("sheet"); sh.classList.remove("warn","ok"); if(cls) sh.classList.add(cls); }
 function startGuide(dest){
   G.dest=dest; G.est=null; G.route=null; G.routeMode=null; G.lastRes=null; if($("modeRow")) $("modeRow").hidden=true; SESSION.destination=dest.custom?dest.label:dest.name; SESSION.dest=clone(dest); saveSession();
-  show("sGuide"); if(!GV) setupGuide(); $("hudDest").textContent=dest.name; $("hudMeta").textContent=dest.custom?dest.label:dest.floor;
+  show("sGuide"); if(!GV) setupGuide(); applyDemo(); $("hudDest").textContent=dest.name; $("hudMeta").textContent=dest.custom?dest.label:dest.floor;
   viewFloor(dest.floor,true); setInstr("scan",t("firstShot"),t("firstShotSub"));
 }
 async function doShot(file){
@@ -573,7 +578,7 @@ async function doShot(file){
     since_prev_s:SESSION.shots.length?((now-SESSION.lastShotMs)/1000).toFixed(1):"", result:res.ok?"success":"reject", reason:res.ok?"":res.reason,
     floor:"", x_m:"", y_m:"", dir_deg:"", inliers:res.inliers, conf:(res.conf||0).toFixed(3), best_point:res.point||"", best_file:res.bestFile||"", proc_ms:ms,
     route_nodes:"", route_length_m:"", instruction:"", top5:(res.top||[]).map(x=>x.file+":"+x.n).join(" "),
-    method:res.method||"", tag_id:res.tag?res.tag.id:"", tag_dist_m:res.tag?res.tag.dist.toFixed(2):"", tag_angle_deg:res.tag?res.tag.angle.toFixed(1):"", tag_side_px:res.tag?res.tag.sidePx.toFixed(0):"", tags_seen:res.tagsSeen||"" };
+    method:res.method||"", tag_id:res.tag?res.tag.id:"", tag_dist_m:res.tag?res.tag.dist.toFixed(2):"", tag_angle_deg:res.tag?res.tag.angle.toFixed(1):"", tag_side_px:res.tag?res.tag.sidePx.toFixed(0):"", tags_seen:res.tagsSeen||"", demo:SESSION.demo?"1":"" };
   $("diag").hidden=!diagOn(); if(diagOn()) $("diag").textContent=diagText(res);
   SESSION.lastShotMs=now;
   if(!res.ok){ setInstr("warn",t("fail"),t("failSub"),"warn"); shot.instruction=t("fail"); pushShot(shot); return; }
@@ -631,7 +636,7 @@ function restoreSession(){ const id=lsGet("vpslmguide_current",null); if(!id) re
   const b=$("btnResume"); b.hidden=false; b.textContent=`前回の続きから再開（${s.subject_id}・撮影${s.shots.length}回）`;
   b.onclick=()=>{ SESSION=s; b.hidden=true; const d=s.dest||CFG.dests.find(x=>x.name===s.destination); if(d) startGuide(d); else { show("sDest"); renderDests(); } }; }
 function newSession(subject,cond){
-  const now=Date.now(); SESSION={id:"s"+now.toString(36), subject_id:subject, condition:cond, destination:"", start:new Date(now).toISOString(), startMs:now, lastShotMs:now, end:"", arrived:"", shots:[], mode:MODE};
+  const now=Date.now(); SESSION={id:"s"+now.toString(36), subject_id:subject, condition:cond, destination:"", start:new Date(now).toISOString(), startMs:now, lastShotMs:now, end:"", arrived:"", shots:[], mode:MODE, demo:demoOn()};
   saveSession();
 }
 function markArrived(how){ if(!SESSION||SESSION.arrived) return; SESSION.arrived=how; SESSION.arrivedAt=new Date().toISOString(); saveSession(); toast(how==="manual"?"到着を記録しました":"到着を検知しました"); }
@@ -643,10 +648,10 @@ async function allSessionsMerged(){
 }
 function csv(rows){ return "﻿"+rows.map(r=>r.map(v=>{ v=v==null?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(",")).join("\r\n"); }
 async function exportLogs(){
-  const ss=await allSessionsMerged(); const H=["session_id","subject_id","condition","destination","shot_no","time","since_start_s","since_prev_s","result","reason","floor","x_m","y_m","dir_deg","inliers","conf","best_point","best_file","proc_ms","route_nodes","route_length_m","route_mode","instruction","top5","method","tag_id","tag_dist_m","tag_angle_deg","tag_side_px","tags_seen"];
+  const ss=await allSessionsMerged(); const H=["session_id","subject_id","condition","destination","shot_no","time","since_start_s","since_prev_s","result","reason","floor","x_m","y_m","dir_deg","inliers","conf","best_point","best_file","proc_ms","route_nodes","route_length_m","route_mode","instruction","top5","method","tag_id","tag_dist_m","tag_angle_deg","tag_side_px","tags_seen","demo"];
   const rows=[H]; for(const s of ss) for(const x of s.shots) rows.push([s.id,s.subject_id,s.condition,s.destination,...H.slice(4).map(k=>x[k])]);
-  const SH=["session_id","subject_id","condition","destination","dest_floor","dest_x_m","dest_y_m","start","end","duration_s","shots","rejects","arrived","arrived_at","route_changes"];
-  const srows=[SH]; for(const s of ss){ const dur=s.end?((Date.parse(s.end)-s.startMs)/1000).toFixed(1):""; const dm=s.dest?toM(s.dest.px,s.dest.floor):null; srows.push([s.id,s.subject_id,s.condition,s.destination,s.dest?s.dest.floor:"",dm?dm[0].toFixed(2):"",dm?dm[1].toFixed(2):"",s.start,s.end,dur,s.shots.length,s.shots.filter(x=>x.result!=="success").length,s.arrived,s.arrivedAt||"",(s.routeChanges||[]).map(x=>x.time.slice(11,19)+":"+x.mode).join(" ")]); }
+  const SH=["session_id","subject_id","condition","destination","dest_floor","dest_x_m","dest_y_m","start","end","duration_s","shots","rejects","arrived","arrived_at","route_changes","demo"];
+  const srows=[SH]; for(const s of ss){ const dur=s.end?((Date.parse(s.end)-s.startMs)/1000).toFixed(1):""; const dm=s.dest?toM(s.dest.px,s.dest.floor):null; srows.push([s.id,s.subject_id,s.condition,s.destination,s.dest?s.dest.floor:"",dm?dm[0].toFixed(2):"",dm?dm[1].toFixed(2):"",s.start,s.end,dur,s.shots.length,s.shots.filter(x=>x.result!=="success").length,s.arrived,s.arrivedAt||"",(s.routeChanges||[]).map(x=>x.time.slice(11,19)+":"+x.mode).join(" "),s.demo?"1":""]); }
   const st=stamp(); const zip=await makeZip([[`shots_${st}.csv`,csv(rows)],[`sessions_${st}.csv`,csv(srows)]]); await saveFile(`vps_logs_${st}.zip`,zip);
 }
 const stamp=()=>new Date().toISOString().slice(0,16).replace(/[-:T]/g,"");
@@ -756,7 +761,7 @@ function renderAdmin(){
           ADMTEST={ps, text:ps.length?ps.map(p=>`ID${p.id}：距離${p.dist.toFixed(2)}m・正面から${p.angle>=0?"右":"左"}${Math.abs(p.angle).toFixed(0)}°・一辺${p.sidePx.toFixed(0)}画素`+(p.reg?`\n　→ 推定位置 ${p.floor} x=${toM(p.px,p.floor)[0].toFixed(2)} y=${toM(p.px,p.floor)[1].toFixed(2)}m・向き${Math.round(p.dir)}°`:"（未登録）")).join("\n")+`\n（${ms}ms）`:`目印が見つかりませんでした（${ms}ms）`};
           const r=ps.find(p=>p.reg); if(r&&r.floor!==AF){ AF=r.floor; AV.setFloor(AF); }
           renderAdmin(); }; }
-      fi.click(); };
+      applyDemo(); fi.click(); };
   } else if(AT==="th"){
     P.innerHTML=`<p><b>推定のしきい値</b>　誤った位置を出さないことを優先します。</p>
       <div class="row"><label>最小一致点 <input type="number" id="tIn" value="${T.minInliers}"></label><label>最小信頼度 <input type="number" step="0.05" id="tCf" value="${T.minConf}"></label></div>
@@ -769,6 +774,11 @@ function renderAdmin(){
     P.innerHTML=`<p><b>実験ログ</b></p><p id="logSum">集計中…</p><div class="row"><button class="btn small" id="lExp">ログを書き出し（CSV×2をZIPで）</button></div><p class="sub">記録項目：被験者ID・条件・目的地・撮影時刻・推定結果（階・x・y・向き）・一致点・信頼度・成功/失敗・処理時間・表示したルート・再撮影の間隔。撮影画像は保存しません。</p>`;
     allSessionsMerged().then(ss=>{ const n=ss.reduce((a,s)=>a+s.shots.length,0); $("logSum").textContent=`セッション ${ss.length}件／撮影 ${n}回`; });
     $("lExp").onclick=()=>exportLogs();
+  } else if(AT==="demo"){
+    P.innerHTML=`<p><b>デモモード</b>（説明・展示用）</p>
+      <div class="row"><label><input type="checkbox" id="dmOn"${demoOn()?" checked":""}> デモモードにする（撮影ボタンで写真ライブラリから選べる）</label></div>
+      <p class="sub">オンの間は、案内画面の「屋内測位（撮影）」と「写真で目印を試す」で、カメラのほかに保存済みの写真も選べます。案内画面の左上に「DEMO」と表示され、ログには demo=1 が付きます。<br>本番の実験の前に必ずオフに戻してください。この設定はこの端末にだけ保存されます。</p>`;
+    $("dmOn").onchange=()=>{ lsSet("vpslmguide_demo",$("dmOn").checked); applyDemo(); toast($("dmOn").checked?"デモモード：オン":"デモモード：オフ"); };
   } else if(AT==="exp"){
     P.innerHTML=`<p><b>書き出し</b></p><div class="row"><button class="btn small" id="ePaper">紙用ルート画像（PNG）</button>${MODE==="claude"?'<button class="btn small" id="ePkg">HTML版パッケージ（ZIP）</button>':'<button class="btn small" id="eCfg">設定（station.json）</button>'}</div>
       <p class="sub">${MODE==="claude"?"HTML版パッケージには、案内アプリ・画像処理エンジン・辞書・構内図・設定がすべて入ります。展開してHTTPSのサーバー（GitHub Pagesなど）に置けば、Claudeなしで動きます。":"この端末で変更した設定を station.json として書き出せます。サーバーの station.json と差し替えると全端末に反映されます。"}</p><p id="eMsg" class="sub"></p>`;
