@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<title>VPS案内（スマステ）</title>
+<style>
+  :root{
+    --cyan:#5fe1ff; --cyan-soft:rgba(95,225,255,.45); --tile:#2f6dff;
+    --glass:rgba(10,22,38,.62); --glass-strong:rgba(8,16,28,.86);
+    --text:#f2f7ff; --muted:rgba(220,235,255,.68); --warn:#ffb86b; --danger:#ff7b72; --ok:#6ff0b0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#05080d;color:var(--text);overflow:hidden}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;-webkit-text-size-adjust:100%}
+  button,input,select{font:inherit;color:inherit}
+  [hidden]{display:none!important}
+  #app{position:relative;width:100%;height:100dvh;max-width:560px;margin:0 auto;overflow:hidden;background:#05080d}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column}
+  .pad{padding:calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 18px)}
+  .eyebrow{font-size:11px;letter-spacing:.32em;color:var(--cyan)}
+  h1{font-size:24px;font-weight:700;margin:6px 0 4px;letter-spacing:.02em}
+  .sub{color:var(--muted);font-size:13px;line-height:1.6}
+  .glass{background:var(--glass);border:1px solid var(--cyan-soft);border-radius:14px;backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 30px rgba(0,0,0,.4);position:relative}
+  .glass::before{content:"";position:absolute;left:14px;right:14px;top:-1px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--cyan),transparent)}
+  .field{display:block;margin:14px 0}
+  .field span{display:block;font-size:11px;letter-spacing:.2em;color:var(--muted);margin-bottom:6px}
+  .field input,.field select{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(95,225,255,.3);background:rgba(5,12,22,.8);outline:none}
+  .field input:focus{border-color:var(--cyan)}
+  .seg{display:flex;gap:6px;padding:4px;border-radius:12px;border:1px solid rgba(95,225,255,.3);background:rgba(5,12,22,.8)}
+  .seg button{flex:1;padding:10px 8px;border-radius:9px;border:0;background:transparent;color:var(--muted);font-weight:600;cursor:pointer}
+  .seg button.on{background:var(--tile);color:#fff;box-shadow:0 0 14px rgba(47,109,255,.55)}
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px 18px;border-radius:12px;border:1px solid var(--cyan-soft);background:rgba(10,30,52,.7);font-weight:600;letter-spacing:.04em;cursor:pointer}
+  .btn.pri{background:linear-gradient(135deg,#2f6dff,#1fb6e6);border-color:transparent;box-shadow:0 0 22px rgba(47,109,255,.55)}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.4}
+  .btn.small{width:auto;padding:9px 14px;font-size:13px;border-radius:10px}
+  .grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(95,225,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(95,225,255,.06) 1px,transparent 1px);background-size:32px 32px;mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 80%);-webkit-mask-image:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 80%)}
+  .dest{display:flex;align-items:center;gap:14px;padding:16px;margin:12px 0;cursor:pointer;text-align:left;width:100%}
+  .tile{flex:none;width:42px;height:42px;border-radius:10px;background:var(--tile);display:grid;place-items:center;box-shadow:0 0 14px rgba(47,109,255,.65);font-weight:700}
+  .dest .nm{font-size:17px;font-weight:700}
+  .dest .ds{font-size:12px;color:var(--muted);margin-top:3px}
+  .status{font-size:12px;color:var(--muted);margin-top:10px;min-height:18px}
+
+  /* map */
+  #map{position:absolute;inset:0;overflow:hidden;touch-action:none;background:#f4f4f2}
+  #world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+  #world img{display:block;user-select:none;-webkit-user-drag:none;pointer-events:none}
+  #world svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+  #map::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(5,8,13,.35),transparent 18%,transparent 70%,rgba(5,8,13,.35))}
+  .route-glow{fill:none;stroke:rgba(47,109,255,.28);stroke-width:12;stroke-linecap:round;stroke-linejoin:round}
+  .route-core{fill:none;stroke:#ffffff;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:2 10;animation:flow 1s linear infinite}
+  .route-base{fill:none;stroke:#2f6dff;stroke-width:5.5;stroke-linecap:round;stroke-linejoin:round}
+  @keyframes flow{to{stroke-dashoffset:-12}}
+  .ring{fill:none;stroke:#2f6dff;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:pulse 1.8s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(2.4);opacity:0}}
+  .hud{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 12px) 14px 0;display:flex;gap:10px;align-items:flex-start;z-index:5}
+  .hud .dcard{flex:1;padding:10px 12px}
+  .hud .lbl{font-size:10px;letter-spacing:.28em;color:var(--cyan)}
+  .hud .dn{font-size:16px;font-weight:700;margin-top:2px}
+  .hud .meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .floors{display:flex;flex-direction:column;gap:6px}
+  .fbtn{width:46px;height:40px;border-radius:10px;border:1px solid var(--cyan-soft);background:var(--glass);font-weight:700;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .fbtn.on{background:var(--tile);border-color:transparent;box-shadow:0 0 14px rgba(47,109,255,.7)}
+  .fbtn.here{outline:2px solid var(--cyan);outline-offset:2px}
+  .sheet{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);padding:14px;z-index:5}
+  .instr{display:flex;gap:12px;align-items:center;min-height:52px}
+  .instr .ic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(47,109,255,.25);border:1px solid var(--cyan-soft)}
+  .instr .ic svg{width:26px;height:26px}
+  .instr .tx{font-size:16px;font-weight:700;line-height:1.35}
+  .instr .sx{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+  .sheet.warn{border-color:rgba(255,184,107,.6)} .sheet.warn::before{background:linear-gradient(90deg,var(--warn),transparent)}
+  .sheet.ok{border-color:rgba(111,240,176,.6)} .sheet.ok::before{background:linear-gradient(90deg,var(--ok),transparent)}
+  .row{display:flex;gap:8px;margin-top:12px}
+  .iconbtn{flex:none;width:52px;border-radius:12px;border:1px solid var(--cyan-soft);background:rgba(10,30,52,.7);cursor:pointer;display:grid;place-items:center}
+  /* scan */
+  #scan{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;z-index:4}
+  #scan.on{opacity:1}
+  #scan .g{position:absolute;inset:0;background-image:linear-gradient(rgba(95,225,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(95,225,255,.12) 1px,transparent 1px);background-size:34px 34px}
+  #scan .beam{position:absolute;left:0;right:0;height:110px;top:-110px;background:linear-gradient(to bottom,transparent,rgba(95,225,255,.25) 85%,rgba(170,242,255,.95));border-bottom:1px solid #b8f3ff}
+  #scan.on .beam{animation:sweep 1.2s cubic-bezier(.5,0,.5,1) infinite}
+  @keyframes sweep{to{top:100%}}
+  #scan .lb{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font-size:12px;letter-spacing:.34em;color:var(--cyan);padding:9px 16px;border:1px solid var(--cyan-soft);background:rgba(5,12,22,.75);border-radius:999px;white-space:nowrap}
+  /* admin */
+  #admin .bar{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;border-bottom:1px solid rgba(95,225,255,.2);background:var(--glass-strong);position:relative;z-index:6}
+  #admin .bar button{flex:none;padding:8px 12px;border-radius:9px;border:1px solid rgba(95,225,255,.3);background:transparent;font-size:13px;cursor:pointer}
+  #admin .bar button.on{background:var(--tile);border-color:transparent}
+  #admin .apanel{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);max-height:48%;overflow:auto;padding:12px;z-index:6;font-size:13px}
+  #admin .apanel p{margin:6px 0;line-height:1.55}
+  #admin .apanel .row{flex-wrap:wrap}
+  #admin input[type=number],#admin input[type=text]{width:90px;padding:7px 8px;border-radius:8px;border:1px solid rgba(95,225,255,.3);background:rgba(5,12,22,.8)}
+  #admin #amap{top:96px}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px} .tbl td,.tbl th{padding:5px 4px;border-bottom:1px solid rgba(95,225,255,.15);text-align:left}
+  #toast{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 90px);transform:translateX(-50%);background:rgba(8,16,28,.92);border:1px solid var(--cyan-soft);padding:9px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;white-space:nowrap}
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 起動・読み込み -->
+  <section class="screen pad" id="sBoot">
+    <div class="grid-bg"></div>
+    <div style="margin-top:auto;margin-bottom:auto;position:relative">
+      <div class="eyebrow">INDOOR POSITIONING</div>
+      <h1 data-t="appTitle"></h1>
+      <p class="sub" id="bootMsg"></p>
+    </div>
+  </section>
+
+  <!-- セッション開始（実験者） -->
+  <section class="screen pad" id="sStart" hidden>
+    <div class="grid-bg"></div>
+    <div style="position:relative">
+      <div class="eyebrow">SESSION</div>
+      <h1 data-t="appTitle"></h1>
+      <p class="sub" data-t="startLead"></p>
+      <label class="field"><span data-t="subjectId"></span><input id="inSubject" type="text" inputmode="text" autocomplete="off" placeholder="S01"></label>
+      <input type="hidden" id="inCond" value="VPS">
+      <button class="btn pri" id="btnStart" data-t="startBtn"></button>
+      <p class="status" id="startStatus"></p>
+      <button class="btn" id="btnResume" hidden style="margin-top:10px"></button>
+    </div>
+    <div style="margin-top:auto;display:flex;gap:8px;position:relative">
+      <button class="btn small ghost" id="btnAdmin" data-t="admin"></button>
+      <a class="btn small ghost" id="lnkRecorder" href="index.html#home" style="text-decoration:none" hidden data-t="recorder"></a>
+    </div>
+  </section>
+
+  <!-- 目的地選択 -->
+  <section class="screen" id="sDest" hidden>
+    <div id="dmap" style="position:absolute;inset:0;overflow:hidden;touch-action:none;background:#f4f4f2"><div id="dworld" style="position:absolute;left:0;top:0;transform-origin:0 0"><img id="dplan" alt="" style="display:block;pointer-events:none"><svg id="dov" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none"></svg></div></div>
+    <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(5,8,13,.35),transparent 18%,transparent 70%,rgba(5,8,13,.35))"></div>
+    <div class="hud">
+      <div class="glass dcard"><div class="lbl">DESTINATION</div><div class="dn" data-t="chooseDest"></div><div class="meta" data-t="chooseDestLead"></div></div>
+      <div class="floors" id="dFloorBtns"></div>
+    </div>
+    <div class="glass sheet">
+      <div class="instr"><div class="ic" id="dIcon"></div><div><div class="tx" id="dText"></div><div class="sx" id="dSub"></div></div></div>
+      <div class="row"><button class="btn pri" id="btnGo" disabled data-t="goHere"></button><button class="iconbtn" id="btnEndFromDest" aria-label="end"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    </div>
+  </section>
+
+  <!-- 案内 -->
+  <section class="screen" id="sGuide" hidden>
+    <div id="map"><div id="world"><img id="planImg" alt=""><svg id="ov"></svg></div></div>
+    <div id="scan"><div class="g"></div><div class="beam"></div><div class="lb">SCANNING · 屋内測位中</div></div>
+    <div class="hud">
+      <div class="glass dcard"><div class="lbl">DESTINATION</div><div class="dn" id="hudDest">-</div><div class="meta" id="hudMeta"></div></div>
+      <div class="floors" id="floorBtns"></div>
+    </div>
+    <div class="glass sheet" id="sheet">
+      <div class="instr"><div class="ic" id="instrIcon"></div><div><div class="tx" id="instrText"></div><div class="sx" id="instrSub"></div></div></div>
+      <div id="diag" hidden style="font-size:11px;line-height:1.5;white-space:pre-line;color:#9fdcff;background:rgba(0,0,0,.35);border-radius:8px;padding:6px 8px;margin:6px 0 2px;font-family:ui-monospace,Menlo,monospace"></div>
+      <div class="row">
+        <button class="btn pri" id="btnShoot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span data-t="shoot"></span></button>
+        <button class="iconbtn" id="btnMenu" aria-label="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></button>
+      </div>
+      <div class="row" id="menuRow" hidden>
+        <button class="btn small" id="btnRecenter" data-t="recenter"></button>
+        <button class="btn small" id="btnArrive" data-t="arrived"></button>
+        <button class="btn small" id="btnEnd" data-t="endSession"></button>
+      </div>
+    </div>
+    <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+  </section>
+
+  <!-- 管理 -->
+  <section class="screen" id="admin" hidden>
+    <div class="bar" style="padding-top:calc(env(safe-area-inset-top) + 8px)">
+      <button data-at="dest">目的地</button><button data-at="start">出発地点(紙)</button><button data-at="net">通路</button>
+      <button data-at="tag">目印</button><button data-at="th">しきい値</button><button data-at="log">ログ</button><button data-at="exp">書き出し</button><button id="admClose">閉じる</button>
+    </div>
+    <div class="bar" style="padding-top:6px"><span id="admFloors" style="display:flex;gap:6px"></span><span class="sub" id="admHint" style="align-self:center"></span></div>
+    <div id="amap" style="position:absolute;left:0;right:0;bottom:0;overflow:hidden;touch-action:none;background:#f4f4f2"><div id="aworld" style="position:absolute;left:0;top:0;transform-origin:0 0"><img id="aplan" alt="" style="display:block;pointer-events:none"><svg id="aov" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none"></svg></div></div>
+    <div class="glass apanel" id="apanel"></div>
+  </section>
+
+  <div id="toast"></div>
+</div>
+
+<script src="opencv.js" async></script>
+<script>
+"use strict";
+// =====================================================================
+// 文言（言語ごとに差し替え可能。将来の母国語対応用）
+// =====================================================================
+const STR = { ja: {
+  appTitle:"VPS案内（スマステ）", startLead:"実験者が入力します。氏名などの個人情報は入力しないでください。",
+  subjectId:"被験者ID", condition:"条件", condVps:"VPS案内", condPaper:"紙の構内図",
+  startBtn:"開始", admin:"案内の設定", recorder:"ホームへ", chooseDest:"行き先を選んでください", chooseDestLead:"地図上の行きたい場所をタップ", goHere:"ここへ案内する", pickHint:"地図をタップして行き先を選んでください", pickHintSub:"2本指で拡大、右上で階を切り替えできます。", picked:"{name}", pickedSub:"{f}・この場所へ案内します", farFromPath:"通路から離れた場所です", farFromPathSub:"通路の近くをタップしてください。", pickedPlace:"選んだ場所",
+  shoot:"屋内測位（撮影）", recenter:"全体表示", arrived:"到着", endSession:"終了",
+  firstShot:"周りを撮影して現在地を調べましょう", firstShotSub:"「屋内測位」を押して、看板や柱など特徴のある方向を撮影してください。",
+  fail:"位置を特定できません", failSub:"別の方向を撮影してください。",
+  go:"{dir}", goSub:"目的地まで約{m}m", goFloor:"エレベーターで{f}へ", goFloorSub:"{f}に着いたら、もう一度撮影してください。",
+  toEv:"{dir}", toEvSub:"エレベーターまで約{m}m → {f}へ",
+  arrive:"目的地に到着しました", arriveSub:"お疲れさまでした。",
+  straight:"まっすぐ進んでください", right:"右に進んでください", left:"左に進んでください", back:"後ろに進んでください", ahead:"ルートに沿って進んでください",
+  noRoute:"ルートが見つかりません", noRouteSub:"「案内の設定」で通路のつながりを確認してください。",
+  noDest:"目的地が登録されていません。「案内の設定」で設定してください。",
+}};
+let LANG="ja";
+const t=(k,v={})=>{ let s=(STR[LANG]&&STR[LANG][k])||STR.ja[k]||k; for(const [a,b] of Object.entries(v)) s=s.replace("{"+a+"}",b); return s; };
+function applyI18n(){ document.querySelectorAll("[data-t]").forEach(e=>e.textContent=t(e.dataset.t)); }
+
+// =====================================================================
+// 状態
+// =====================================================================
+const $=id=>document.getElementById(id);
+const FLOORS=["1F","3F"];
+const DEFAULT_CFG={
+  thresholds:{minInliers:20,minConf:0.25,rivalDist:6,arriveDist:3},
+  tags:[], tagSize:0.16, f35:28, tagMaxDist:12,   // 人工ランドマーク（AprilTag）：登録一覧・一辺(m)・35mm換算焦点距離・使う最大距離(m)
+  dests:[], start:null,
+  floorCost:15,
+  network:{nodes:[
+    {id:"EV1",floor:"1F",px:[2060,760],kind:"ev"},{id:"EH1",floor:"1F",px:[1995,850]},{id:"ED1",floor:"1F",px:[2075,930]},
+    {id:"P04",floor:"1F",px:[1770,778]},
+    {id:"P08",floor:"1F",px:[828,1037]},{id:"P07",floor:"1F",px:[1175,1179]},{id:"P06",floor:"1F",px:[1526,1068]},{id:"P05",floor:"1F",px:[1838,1049]},
+    {id:"P01",floor:"1F",px:[2079,1076]},{id:"P02",floor:"1F",px:[2445,1076]},{id:"P03",floor:"1F",px:[2975,1163]},
+    {id:"EV3",floor:"3F",px:[1263,160],kind:"ev"},{id:"ED3",floor:"3F",px:[1265,215]},
+    {id:"P10",floor:"3F",px:[1013,234]},{id:"P11",floor:"3F",px:[688,236]},{id:"P12",floor:"3F",px:[502,422]},{id:"P13",floor:"3F",px:[497,658]},
+    {id:"P14",floor:"3F",px:[854,669]},{id:"P15",floor:"3F",px:[1185,696]},{id:"P09",floor:"3F",px:[1215,471]},{id:"P16",floor:"3F",px:[1187,309]}],
+   edges:[["EV1","EH1"],["EV1","ED1"],["EH1","P04"],["EH1","ED1"],["ED1","P01"],
+    ["P08","P07"],["P08","P06"],["P07","P06"],["P06","P05"],["P05","P01"],["P01","P02"],["P02","P03"],
+    ["EV3","ED3"],["ED3","P16"],["ED3","P10"],["P10","P11"],["P11","P12"],["P12","P13"],["P13","P14"],["P14","P15"],["P15","P09"],["P09","P16"],["P16","P10"],
+    ["EV1","EV3","floor"]]}
+};
+let MODE="claude";            // "file"（HTML版） or "claude"
+let BASE=null;                // {cal, points, refs}
+let CFG=null;                 // 案内設定（通路・目的地・しきい値）
+let PLAN={};                  // floor -> {url,w,h}
+let DICT=[];                  // [{ref,pts,des,n}]
+let CV=null, ORB=null, BF=null, CLAHE=null;
+let DB=null, AS=null, DL=null;
+let SESSION=null;             // 現在のセッション
+let G={floor:"1F", dest:null, est:null, route:null, busy:false, lastShotAt:0};
+
+// =====================================================================
+// 起動
+// =====================================================================
+const boot=m=>{ $("bootMsg").textContent=m; };
+function show(id){ ["sBoot","sStart","sDest","sGuide","admin"].forEach(s=>$(s).hidden=(s!==id)); }
+let tt; function toast(s){ const e=$("toast"); e.textContent=s; e.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>e.classList.remove("show"),2200); }
+
+async function getJSON(u){ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw new Error(u+" "+r.status); return r.json(); }
+function b64d(s){ const b=atob(s), u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+
+async function init(){
+  applyI18n(); boot("データを読み込み中…");
+  let station=null;
+  try{ station=await getJSON("station.json"); MODE="file"; }catch(e){ MODE="claude"; }
+  if(MODE==="claude"){
+    for(let i=0;i<50&&!(window.claude&&window.claude.use);i++) await new Promise(r=>setTimeout(r,100));
+    try{ DB=await claude.use("db"); AS=await claude.use("assets"); DL=await claude.use("downloads"); }catch(e){}
+    if(!DB){ boot("データを読み込めませんでした（station.json もクラウドもありません）。"); return; }
+    const st=(await DB.doc("state/smartstation").get()).data()||{};
+    BASE={cal:st.cal, points:st.points||[], refs:(st.records||[]).filter(r=>r.photo&&!/test/i.test(r.note||"")).map(r=>({file:r.file,point:r.point,floor:r.floor,px:r.px,dir:r.dir,asset:r.asset}))};
+    BASE.dictChunks=st.dictChunks||[];
+    const c=await DB.doc("guide/config").get(); CFG=c.exists?mergeCfg(c.data()):clone(DEFAULT_CFG);
+    $("lnkRecorder").hidden=false;
+  } else {
+    BASE={cal:station.cal, points:station.points, refs:station.refs};
+    CFG=mergeCfg(station.guide||{});
+    try{ const o=localStorage.getItem("vpsguide_cfg"); if(o) CFG=mergeCfg(JSON.parse(o)); }catch(e){}
+  }
+  boot("構内図を準備中…");
+  for(const f of FLOORS) PLAN[f]=await darkPlan("plans/"+f+".png");
+  boot("画像処理エンジンを準備中…");
+  await initCV();
+  boot("辞書を読み込み中…");
+  await loadDict();
+  if(!DICT.length){ boot("辞書が空です。管理ツールで辞書を作成してください。"); return; }
+  restoreSession();
+  show("sStart");
+}
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function mergeCfg(c){ const d=clone(DEFAULT_CFG); const o=Object.assign(d,c||{}); o.thresholds=Object.assign(clone(DEFAULT_CFG.thresholds),(c&&c.thresholds)||{}); if(!o.network||!o.network.nodes) o.network=clone(DEFAULT_CFG.network); return o; }
+
+// 構内図を暗い色調に変換（表示と紙用画像で同じ見た目にする）
+async function darkPlan(url){
+  const img=new Image(); img.src=url; await img.decode();
+  const c=document.createElement("canvas"); c.width=img.naturalWidth; c.height=img.naturalHeight;
+  const x=c.getContext("2d"); x.drawImage(img,0,0); const d=x.getImageData(0,0,c.width,c.height), p=d.data;
+  // 簡略構内図（明るい版）をそのまま使う
+  if(true) return {url, w:c.width, h:c.height, canvas:c};
+  const bg=[7,13,22], ink=[150,206,232];
+  for(let i=0;i<p.length;i+=4){ const v=(p[i]*.3+p[i+1]*.59+p[i+2]*.11)/255; const k=Math.pow(1-v,.8)*.9;
+    p[i]=bg[0]+(ink[0]-bg[0])*k; p[i+1]=bg[1]+(ink[1]-bg[1])*k; p[i+2]=bg[2]+(ink[2]-bg[2])*k; p[i+3]=255; }
+  x.putImageData(d,0,0);
+  const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+  return {url:URL.createObjectURL(blob), w:c.width, h:c.height, canvas:c};
+}
+
+// =====================================================================
+// 画像処理（ORB＋照合＋RANSAC）
+// =====================================================================
+async function initCV(){
+  for(let i=0;i<900&&!(window.cv&&(window.cv.Mat||window.cv instanceof Promise));i++) await new Promise(r=>setTimeout(r,100));
+  let c=window.cv; if(c instanceof Promise) c=await c;
+  for(let i=0;i<900&&!c.Mat;i++) await new Promise(r=>setTimeout(r,100));
+  CV=c; ORB=new CV.ORB(1500); BF=new CV.BFMatcher(CV.NORM_HAMMING,false); CLAHE=new CV.CLAHE(2.0,new CV.Size(8,8));
+}
+async function loadDict(){
+  let items=[];
+  if(MODE==="file"){ const j=await getJSON("dict.json"); items=j.items; }
+  else for(const id of BASE.dictChunks){ try{ const r=await fetch("/_blob/"+id); if(r.ok) items=items.concat((await r.json()).items); }catch(e){} }
+  const byFile=new Map(BASE.refs.map(r=>[r.file,r]));
+  for(const it of items){ const ref=byFile.get(it.file); if(!ref) continue;
+    const des=new CV.Mat(it.rows,it.cols,CV.CV_8U); const b=b64d(it.des); if(b.length) des.data.set(b);
+    DICT.push({ref,pts:new Float32Array(b64d(it.pts).buffer),des,n:it.n,raw:it}); }
+}
+async function feat(blob){
+  const bmp=await createImageBitmap(blob); const s=Math.min(1,640/Math.max(bmp.width,bmp.height));
+  const w=Math.round(bmp.width*s), h=Math.round(bmp.height*s); const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+  cv.getContext("2d").drawImage(bmp,0,0,w,h); if(bmp.close) bmp.close();
+  const src=CV.imread(cv), g=new CV.Mat(); CV.cvtColor(src,g,CV.COLOR_RGBA2GRAY); src.delete(); CLAHE.apply(g,g);
+  const kp=new CV.KeyPointVector(), des=new CV.Mat(), mask=new CV.Mat(); ORB.detectAndCompute(g,mask,kp,des);
+  const n=kp.size(), pts=new Float32Array(n*2); for(let i=0;i<n;i++){ const k=kp.get(i); pts[2*i]=k.pt.x; pts[2*i+1]=k.pt.y; }
+  g.delete(); kp.delete(); mask.delete(); return {pts,des,n};
+}
+function score(q,e){
+  if(q.n<10||e.n<10) return 0;
+  const mv=new CV.DMatchVectorVector(); BF.knnMatch(q.des,e.des,mv,2); const src=[],dst=[];
+  for(let i=0;i<mv.size();i++){ const m=mv.get(i); if(m.size()>=2){ const a=m.get(0),b=m.get(1);
+    if(a.distance<0.75*b.distance){ src.push(q.pts[2*a.queryIdx],q.pts[2*a.queryIdx+1]); dst.push(e.pts[2*a.trainIdx],e.pts[2*a.trainIdx+1]); } } m.delete(); }
+  mv.delete(); const good=src.length/2; if(good<8) return 0;
+  const sm=CV.matFromArray(good,1,CV.CV_32FC2,src), dm=CV.matFromArray(good,1,CV.CV_32FC2,dst), mk=new CV.Mat();
+  const H=CV.findHomography(sm,dm,CV.RANSAC,8,mk); let inl=0; if(!H.empty()) for(let i=0;i<mk.rows;i++) if(mk.data[i]) inl++;
+  sm.delete(); dm.delete(); mk.delete(); H.delete(); return inl;
+}
+const tick=()=>new Promise(r=>setTimeout(r,0));
+// 推定：最も一致した参照写真＋近い候補の加重平均。信頼度＝1−（一定距離以上離れた別候補の一致点／最大一致点）
+async function estimate(blob){
+  const T=CFG.thresholds; const q=await feat(blob); const sc=[]; let i=0;
+  for(const e of DICT){ sc.push({e,n:score(q,e)}); if(++i%8===0) await tick(); }
+  q.des.delete(); sc.sort((a,b)=>b.n-a.n); const best=sc[0];
+  const base={qn:q.n, inliers:best?best.n:0, top:sc.slice(0,5).map(s=>({file:s.e.ref.file,n:s.n}))};
+  if(!best||best.n<T.minInliers) return {...base, ok:false, reason:"low_inliers", conf:0};
+  const bm=toM(best.e.ref.px,best.e.ref.floor);
+  const rival=sc.find(s=>{ if(s.e.ref.floor!==best.e.ref.floor) return true; const m=toM(s.e.ref.px,s.e.ref.floor); return Math.hypot(m[0]-bm[0],m[1]-bm[1])>=T.rivalDist; });
+  const conf=1-(rival?rival.n:0)/best.n;
+  if(conf<T.minConf) return {...base, ok:false, reason:"low_conf", conf, point:best.e.ref.point};
+  const near=sc.filter(s=>s.e.ref.floor===best.e.ref.floor && s.n>=best.n*0.5 && (()=>{const m=toM(s.e.ref.px,s.e.ref.floor); return Math.hypot(m[0]-bm[0],m[1]-bm[1])<T.rivalDist;})()).slice(0,5);
+  const W=near.reduce((a,s)=>a+s.n,0);
+  const px=[near.reduce((a,s)=>a+s.n*s.e.ref.px[0],0)/W, near.reduce((a,s)=>a+s.n*s.e.ref.px[1],0)/W];
+  return {...base, ok:true, conf, floor:best.e.ref.floor, px, dir:best.e.ref.dir, point:best.e.ref.point, bestFile:best.e.ref.file};
+}
+// =====================================================================
+// 人工ランドマーク（AprilTag 36h11）：検出と位置・向きの計算
+// 目印の座標系：x＝目印に向かって右、y＝上、z＝目印の正面（手前）方向
+// =====================================================================
+let TAGDET=null;
+function tagInit(){
+  if(TAGDET) return TAGDET;
+  const dict=CV.getPredefinedDictionary(CV.DICT_APRILTAG_36h11);
+  const p=new CV.aruco_DetectorParameters(); try{ p.cornerRefinementMethod=1; }catch(e){} // 1＝SUBPIX（角の位置を細かく合わせる）
+  TAGDET=new CV.aruco_ArucoDetector(dict,p,new CV.aruco_RefineParameters(10,3,true));
+  return TAGDET;
+}
+// 白黒画像から目印を探し、各目印に対するカメラの位置（目印座標系, m）と向きを返す
+// f35：35mm判換算の焦点距離（iPhone SE 第2・3世代の広角カメラは28mm）
+function tagPoses(gray,size,f35){
+  const det=tagInit(); const W=gray.cols, H=gray.rows;
+  const corners=new CV.MatVector(), ids=new CV.Mat(), rej=new CV.MatVector();
+  det.detectMarkers(gray,corners,ids,rej);
+  const f=f35/43.27*Math.hypot(W,H);
+  const K=CV.matFromArray(3,3,CV.CV_64F,[f,0,W/2, 0,f,H/2, 0,0,1]), dist=CV.Mat.zeros(4,1,CV.CV_64F);
+  const out=[];
+  for(let i=0;i<ids.rows;i++){
+    const id=ids.data32S[i], c=Array.from(corners.get(i).data32F);
+    const sz=typeof size==="function"?size(id):size, h=sz/2;
+    const obj=CV.matFromArray(4,1,CV.CV_32FC3,[-h,h,0, h,h,0, h,-h,0, -h,-h,0]);
+    const img=CV.matFromArray(4,1,CV.CV_32FC2,c);
+    const rv=new CV.Mat(), tv=new CV.Mat(), Rm=new CV.Mat();
+    let ok=false; try{ ok=CV.solvePnP(obj,img,K,dist,rv,tv,false,CV.SOLVEPNP_IPPE_SQUARE); }catch(e){ ok=false; }
+    if(ok){
+      CV.Rodrigues(rv,Rm); const R=Rm.data64F, t=tv.data64F;
+      // カメラの位置 C＝−Rᵀt、カメラの視線方向 a＝Rᵀ(0,0,1)
+      const C=[-(R[0]*t[0]+R[3]*t[1]+R[6]*t[2]), -(R[1]*t[0]+R[4]*t[1]+R[7]*t[2]), -(R[2]*t[0]+R[5]*t[1]+R[8]*t[2])];
+      const a=[R[6],R[7],R[8]];
+      const side=Math.max(...[0,1,2,3].map(k=>Math.hypot(c[2*k]-c[(2*k+2)%8],c[2*k+1]-c[(2*k+3)%8])));
+      out.push({id, C, a, dist:Math.hypot(C[0],C[2]), angle:Math.atan2(C[0],C[2])*180/Math.PI, sidePx:side, corners:c});
+    }
+    obj.delete(); img.delete(); rv.delete(); tv.delete(); Rm.delete();
+  }
+  K.delete(); dist.delete(); corners.delete(); ids.delete(); rej.delete();
+  return out;
+}
+// 目印の登録情報（地図上の位置 m・面が向く方向 θ）から、利用者の地図上の位置（m）と向き（°、図面の上＝0で時計回り）を求める
+function tagToMap(pose,tagM,face){
+  const th=face*Math.PI/180, n=[Math.sin(th),Math.cos(th)], r=[-Math.cos(th),Math.sin(th)];
+  const x=tagM[0]+pose.C[2]*n[0]+pose.C[0]*r[0], y=tagM[1]+pose.C[2]*n[1]+pose.C[0]*r[1];
+  const dx=pose.a[2]*n[0]+pose.a[0]*r[0], dy=pose.a[2]*n[1]+pose.a[0]*r[1];
+  return {m:[x,y], dir:(Math.atan2(dx,dy)*180/Math.PI+360)%360};
+}
+
+function fromM(m,f){ const c=BASE.cal[f], k=ppm(f); return [c.origin[0]+m[0]*k, c.origin[1]-m[1]*k]; }
+// 写真から目印を探す（縮小しすぎると遠くの目印が読めないため、長辺3200画素まで）
+async function detectTagsInFile(blob){
+  const bmp=await createImageBitmap(blob); const s=Math.min(1,3200/Math.max(bmp.width,bmp.height));
+  const w=Math.round(bmp.width*s), h=Math.round(bmp.height*s); const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+  cv.getContext("2d").drawImage(bmp,0,0,w,h); if(bmp.close) bmp.close();
+  const src=CV.imread(cv), g=new CV.Mat(); CV.cvtColor(src,g,CV.COLOR_RGBA2GRAY); src.delete(); cv.width=cv.height=0;
+  const poses=tagPoses(g,CFG.tagSize,CFG.f35); g.delete();
+  return poses.map(p=>{ const reg=(CFG.tags||[]).find(t=>t.id===p.id); if(!reg) return {...p,reg:null};
+    const r=tagToMap(p,toM(reg.px,reg.floor),reg.face); return {...p,reg,floor:reg.floor,px:fromM(r.m,reg.floor),dir:r.dir}; });
+}
+// 目印を優先し、使える目印がなければVPS（画像照合）で推定する
+async function locate(blob){
+  let tags=[]; try{ tags=await detectTagsInFile(blob); }catch(e){ tags=[]; }
+  const seen=tags.map(p=>p.id+(p.reg?"":"(未登録)")+"@"+p.dist.toFixed(1)+"m").join(" ");
+  const use=tags.filter(p=>p.reg&&p.dist<=CFG.tagMaxDist).sort((a,b)=>a.dist-b.dist)[0];
+  if(use) return {ok:true, method:"tag", floor:use.floor, px:use.px, dir:Math.round(use.dir), conf:1, inliers:"", top:[], tag:use, tagsSeen:seen};
+  const r=await estimate(blob); return {...r, method:"vps", tagsSeen:seen};
+}
+function diagOn(){ return !!lsGet("vpsguide_diag",false); }
+function diagText(res){
+  const a=[];
+  if(res.method==="tag"){ const p=res.tag; a.push(`目印 ID${p.id}・距離${p.dist.toFixed(1)}m・正面から${p.angle>=0?"右":"左"}${Math.abs(p.angle).toFixed(0)}°・一辺${p.sidePx.toFixed(0)}画素`); }
+  else { a.push(res.tagsSeen?`目印：${res.tagsSeen}（使える目印なし）`:"目印：写っていない");
+    const tp=(res.top||[])[0]; a.push(`VPS：${res.ok?"成功":"失敗（"+({low_inliers:"一致点不足",low_conf:"信頼度不足"}[res.reason]||res.reason)+"）"}・一致点${res.inliers||0}${tp?"（"+tp.file.replace(".jpg","")+"）":""}・信頼度${(res.conf||0).toFixed(2)}`); }
+  if(res.ok){ const m=toM(res.px,res.floor); a.push(`推定：${res.floor} x=${m[0].toFixed(1)} y=${m[1].toFixed(1)}m・向き${Math.round(res.dir)}°`); }
+  return a.join("\n");
+}
+
+// =====================================================================
+// 座標・ルート（ダイクストラ法）
+// =====================================================================
+function ppm(f){ const c=BASE.cal[f]; return Math.hypot(c.scaleB[0]-c.scaleA[0],c.scaleB[1]-c.scaleA[1])/c.scaleM; }
+function toM(px,f){ const c=BASE.cal[f], k=ppm(f); return [(px[0]-c.origin[0])/k,(c.origin[1]-px[1])/k]; }
+const nodeById=id=>CFG.network.nodes.find(n=>n.id===id);
+function edgeLen(a,b,type){ if(type==="floor"||a.floor!==b.floor) return CFG.floorCost; return Math.hypot(a.px[0]-b.px[0],a.px[1]-b.px[1])/ppm(a.floor); }
+// 点を同じ階の最も近い通路に寄せる
+function snap(px,floor){
+  let best=null;
+  for(const [ia,ib,type] of CFG.network.edges){ if(type==="floor") continue; const a=nodeById(ia), b=nodeById(ib); if(!a||!b||a.floor!==floor||b.floor!==floor) continue;
+    const dx=b.px[0]-a.px[0], dy=b.px[1]-a.px[1], L2=dx*dx+dy*dy||1; let u=((px[0]-a.px[0])*dx+(px[1]-a.px[1])*dy)/L2; u=Math.max(0,Math.min(1,u));
+    const q=[a.px[0]+u*dx,a.px[1]+u*dy], d=Math.hypot(q[0]-px[0],q[1]-px[1]); if(!best||d<best.d) best={d,q,a,b}; }
+  return best;
+}
+function route(from,fromFloor,to,toFloor){
+  const sA=snap(from,fromFloor), sB=snap(to,toFloor); if(!sA||!sB) return null;
+  const nodes=new Map(CFG.network.nodes.map(n=>[n.id,n])); const adj=new Map(); const add=(u,v,w)=>{ if(!adj.has(u)) adj.set(u,[]); adj.get(u).push([v,w]); };
+  for(const [a,b,type] of CFG.network.edges){ const A=nodes.get(a),B=nodes.get(b); if(!A||!B) continue; const w=edgeLen(A,B,type); add(a,b,w); add(b,a,w); }
+  nodes.set("@S",{id:"@S",floor:fromFloor,px:sA.q}); nodes.set("@T",{id:"@T",floor:toFloor,px:sB.q});
+  const k=f=>ppm(f);
+  for(const n of [sA.a,sA.b]){ const w=Math.hypot(n.px[0]-sA.q[0],n.px[1]-sA.q[1])/k(fromFloor); add("@S",n.id,w); add(n.id,"@S",w); }
+  for(const n of [sB.a,sB.b]){ const w=Math.hypot(n.px[0]-sB.q[0],n.px[1]-sB.q[1])/k(toFloor); add("@T",n.id,w); add(n.id,"@T",w); }
+  if(sA.a===sB.a&&sA.b===sB.b||sA.a===sB.b&&sA.b===sB.a){ const w=Math.hypot(sA.q[0]-sB.q[0],sA.q[1]-sB.q[1])/k(fromFloor); if(fromFloor===toFloor){ add("@S","@T",w); add("@T","@S",w);} }
+  const dist=new Map([["@S",0]]), prev=new Map(), done=new Set();
+  while(true){ let u=null,du=Infinity; for(const [n,d] of dist) if(!done.has(n)&&d<du){u=n;du=d;} if(u===null) break; if(u==="@T") break; done.add(u);
+    for(const [v,w] of adj.get(u)||[]){ const nd=du+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); } } }
+  if(!dist.has("@T")) return null;
+  const path=[]; for(let u="@T";u;u=prev.get(u)) path.unshift(nodes.get(u));
+  const tail=Math.hypot(to[0]-sB.q[0],to[1]-sB.q[1]); if(tail>1) path.push({id:"@D",floor:toFloor,px:to});
+  return {path, length:dist.get("@T")+tail/ppm(toFloor), startSnap:sA.q};
+}
+// ルートを階ごとの区間に分ける
+function legs(r){ const out=[]; let cur=null; for(const n of r.path){ if(!cur||cur.floor!==n.floor){ cur={floor:n.floor,pts:[]}; out.push(cur); } cur.pts.push(n.px); } return out; }
+function legLen(leg){ let s=0; for(let i=1;i<leg.pts.length;i++) s+=Math.hypot(leg.pts[i][0]-leg.pts[i-1][0],leg.pts[i][1]-leg.pts[i-1][1]); return s/ppm(leg.floor); }
+function bearing(a,b){ return (Math.atan2(b[0]-a[0],-(b[1]-a[1]))*180/Math.PI+360)%360; }
+function turnWord(heading,brg){ const d=((brg-heading+540)%360)-180; if(Math.abs(d)<=30) return t("straight"); if(d>30&&d<150) return t("right"); if(d<-30&&d>-150) return t("left"); return t("back"); }
+
+// =====================================================================
+// 地図表示（パン・ピンチ）
+// =====================================================================
+function makeView(mapEl,worldEl,imgEl,svgEl){
+  const V={s:1,tx:0,ty:0,floor:null,mapEl,worldEl,imgEl,svgEl,onTap:null,onChange:null};
+  V.apply=()=>{ worldEl.style.transform=`translate(${V.tx}px,${V.ty}px) scale(${V.s})`; if(V.onChange) V.onChange(); };
+  V.setFloor=f=>{ V.floor=f; const P=PLAN[f]; imgEl.src=P.url; imgEl.width=P.w; imgEl.height=P.h; svgEl.setAttribute("width",P.w); svgEl.setAttribute("height",P.h); svgEl.setAttribute("viewBox",`0 0 ${P.w} ${P.h}`); };
+  V.fit=(box,insetTop=0,insetBottom=0)=>{ const W=mapEl.clientWidth, H=mapEl.clientHeight-insetTop-insetBottom; const bw=Math.max(box[2]-box[0],300), bh=Math.max(box[3]-box[1],300);
+    V.s=Math.min(W/bw,H/bh)*0.86; V.s=Math.max(0.05,Math.min(V.s,1.5)); const cx=(box[0]+box[2])/2, cy=(box[1]+box[3])/2; V.tx=W/2-cx*V.s; V.ty=insetTop+H/2-cy*V.s; V.apply(); };
+  V.toPlan=(cx,cy)=>{ const r=mapEl.getBoundingClientRect(); return [(cx-r.left-V.tx)/V.s,(cy-r.top-V.ty)/V.s]; };
+  const pts=new Map(); let last=null, moved=0, pinch=null;
+  mapEl.addEventListener("pointerdown",e=>{ mapEl.setPointerCapture(e.pointerId); pts.set(e.pointerId,[e.clientX,e.clientY]); moved=0;
+    if(pts.size===2){ const [a,b]=[...pts.values()]; pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),s:V.s,cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2,tx:V.tx,ty:V.ty}; } last=[e.clientX,e.clientY]; });
+  mapEl.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size>=2&&pinch){ const [a,b]=[...pts.values()]; const d=Math.hypot(a[0]-b[0],a[1]-b[1]); const r=mapEl.getBoundingClientRect();
+      const ns=Math.max(0.05,Math.min(4,pinch.s*d/pinch.d)); const px=(pinch.cx-r.left-pinch.tx)/pinch.s, py=(pinch.cy-r.top-pinch.ty)/pinch.s;
+      const ncx=(a[0]+b[0])/2-r.left, ncy=(a[1]+b[1])/2-r.top; V.s=ns; V.tx=ncx-px*ns; V.ty=ncy-py*ns; V.apply(); moved=99; }
+    else if(pts.size===1&&last){ const dx=e.clientX-last[0], dy=e.clientY-last[1]; moved+=Math.abs(dx)+Math.abs(dy); V.tx+=dx; V.ty+=dy; last=[e.clientX,e.clientY]; V.apply(); } });
+  const up=e=>{ const wasSingle=pts.size===1; pts.delete(e.pointerId); if(pts.size<2) pinch=null; if(pts.size===1) last=[...pts.values()][0];
+    if(wasSingle&&moved<8&&V.onTap) V.onTap(V.toPlan(e.clientX,e.clientY)); };
+  mapEl.addEventListener("pointerup",up); mapEl.addEventListener("pointercancel",e=>{pts.delete(e.pointerId);pinch=null;});
+  mapEl.addEventListener("wheel",e=>{ e.preventDefault(); const r=mapEl.getBoundingClientRect(); const f=Math.exp(-e.deltaY*0.0015); const ns=Math.max(0.05,Math.min(4,V.s*f));
+    const px=(e.clientX-r.left-V.tx)/V.s, py=(e.clientY-r.top-V.ty)/V.s; V.s=ns; V.tx=e.clientX-r.left-px*ns; V.ty=e.clientY-r.top-py*ns; V.apply(); },{passive:false});
+  return V;
+}
+
+// =====================================================================
+// 描画（案内画面・紙用画像で共通の見た目）
+// =====================================================================
+const ICON={
+  arrow:'<svg viewBox="0 0 24 24" fill="none" stroke="#5fe1ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5M6 11l6-6 6 6"/></svg>',
+  right:'<svg viewBox="0 0 24 24" fill="none" stroke="#5fe1ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20v-7a4 4 0 014-4h9M14 4l5 5-5 5"/></svg>',
+  left:'<svg viewBox="0 0 24 24" fill="none" stroke="#5fe1ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20v-7a4 4 0 00-4-4H5M10 4L5 9l5 5"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="#5fe1ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v9a5 5 0 0010 0V9M5 7l3-3 3 3"/></svg>',
+  ev:'<svg viewBox="0 0 24 24" fill="none" stroke="#5fe1ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 9l3-3 3 3M9 15l3 3 3-3"/></svg>',
+  scan:'<svg viewBox="0 0 24 24" fill="none" stroke="#5fe1ff" stroke-width="2" stroke-linecap="round"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M4 12h16"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="#ffb86b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>',
+  flag:'<svg viewBox="0 0 24 24" fill="none" stroke="#6ff0b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+};
+// マーカーは画面上の大きさが一定になるよう scale(1/s) で描く
+function destMarker(p,s){ return `<g transform="translate(${p[0]} ${p[1]}) scale(${1/s})"><circle r="34" fill="rgba(47,109,255,.16)"/><circle class="ring" r="16" style="stroke:#2f6dff"/>
+  <rect x="-16" y="-16" width="32" height="32" rx="7" fill="#2f6dff" stroke="#e9fbff" stroke-width="2"/>
+  <path d="M-6 9V-9M-6 -9h11l-3 4.5 3 4.5h-11" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>`; }
+function evMarker(p,s){ return `<g transform="translate(${p[0]} ${p[1]}) scale(${1/s})"><rect x="-14" y="-14" width="28" height="28" rx="5" fill="#1a1a1a" stroke="#ffffff" stroke-width="1.6"/>
+  <text y="5" font-size="13" text-anchor="middle" fill="#ffffff" font-weight="700" font-family="-apple-system,sans-serif">EV</text></g>`; }
+function youMarker(p,dir,s,showCone=true){ const L=78, hw=28*Math.PI/180;
+  const cone=showCone?`<path d="M0 0 L${L*Math.sin(-hw)} ${-L*Math.cos(-hw)} A${L} ${L} 0 0 1 ${L*Math.sin(hw)} ${-L*Math.cos(hw)} Z" fill="url(#coneG)" transform="rotate(${dir})"/>`:"";
+  return `<g transform="translate(${p[0]} ${p[1]}) scale(${1/s})">${cone}<circle class="ring" r="15"/><circle r="11" fill="#e9fbff"/><circle r="7.5" fill="#2f6dff"/></g>`; }
+const DEFS='<defs><radialGradient id="coneG" cx="0" cy="0" r="78" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5fe1ff" stop-opacity=".55"/><stop offset="1" stop-color="#5fe1ff" stop-opacity="0"/></radialGradient></defs>';
+function routeSvg(pts){ const d="M"+pts.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" L"); return `<path class="route-glow" d="${d}" vector-effect="non-scaling-stroke"/><path class="route-base" d="${d}" vector-effect="non-scaling-stroke"/><path class="route-core" d="${d}" vector-effect="non-scaling-stroke"/>`; }
+
+// =====================================================================
+// 案内画面
+// =====================================================================
+let GV=null;
+function setupGuide(){
+  GV=makeView($("map"),$("world"),$("planImg"),$("ov")); GV.onChange=drawGuide;
+  $("floorBtns").innerHTML=FLOORS.slice().reverse().map(f=>`<button class="fbtn" data-f="${f}">${f}</button>`).join("");
+  $("floorBtns").querySelectorAll("button").forEach(b=>b.onclick=()=>{ viewFloor(b.dataset.f,true); });
+  $("btnShoot").onclick=()=>{ if(!G.busy) $("camIn").click(); };
+  $("camIn").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(f) await doShot(f); };
+  $("btnMenu").onclick=()=>$("menuRow").hidden=!$("menuRow").hidden;
+  $("btnRecenter").onclick=()=>fitGuide();
+  $("btnArrive").onclick=()=>{ markArrived("manual"); };
+  $("btnEnd").onclick=()=>endSession();
+}
+function viewFloor(f,fit){ GV.setFloor(f); G.viewFloor=f; $("floorBtns").querySelectorAll("button").forEach(b=>{ b.classList.toggle("on",b.dataset.f===f); b.classList.toggle("here",!!G.est&&G.est.floor===b.dataset.f); }); if(fit) fitGuide(); else drawGuide(); }
+function fitGuide(){
+  const f=G.viewFloor; let pts=[];
+  if(G.route) for(const l of legs(G.route)) if(l.floor===f) pts=pts.concat(l.pts);
+  if(G.est&&G.est.floor===f) pts.push(G.est.px);
+  if(G.dest&&G.dest.floor===f) pts.push(G.dest.px);
+  if(!pts.length){ const P=PLAN[f]; GV.fit([0,0,P.w,P.h],90,170); return; }
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]); GV.fit([Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],100,175);
+}
+function drawGuide(){
+  if(!GV) return; const f=G.viewFloor, s=GV.s; let h=DEFS;
+  if(G.route) for(const l of legs(G.route)) if(l.floor===f) h+=routeSvg(l.pts);
+  if(G.route){ for(const n of G.route.path) if(n.kind==="ev"&&n.floor===f) h+=evMarker(n.px,s); }
+  if(G.dest&&G.dest.floor===f) h+=destMarker(G.dest.px,s);
+  if(G.est&&G.est.floor===f) h+=youMarker(G.route?G.route.startSnap:G.est.px,G.est.dir,s);
+  $("ov").innerHTML=h;
+}
+function setInstr(icon,text,sub,cls){ $("instrIcon").innerHTML=ICON[icon]; $("instrText").textContent=text; $("instrSub").textContent=sub||""; const sh=$("sheet"); sh.classList.remove("warn","ok"); if(cls) sh.classList.add(cls); }
+function startGuide(dest){
+  G.dest=dest; G.est=null; G.route=null; SESSION.destination=dest.custom?dest.label:dest.name; SESSION.dest=clone(dest); saveSession();
+  show("sGuide"); if(!GV) setupGuide(); $("hudDest").textContent=dest.name; $("hudMeta").textContent=dest.custom?dest.label:dest.floor;
+  viewFloor(dest.floor,true); setInstr("scan",t("firstShot"),t("firstShotSub"));
+}
+async function doShot(file){
+  G.busy=true; $("btnShoot").disabled=true; $("scan").classList.add("on"); const t0=performance.now(); const now=Date.now();
+  let res; try{ res=await locate(file); }catch(e){ res={ok:false,method:"vps",reason:"error:"+(e.message||e),conf:0,inliers:0,top:[]}; }
+  const ms=Math.round(performance.now()-t0);
+  $("scan").classList.remove("on"); G.busy=false; $("btnShoot").disabled=false;
+  const shot={ shot_no:SESSION.shots.length+1, time:new Date(now).toISOString(), since_start_s:((now-SESSION.startMs)/1000).toFixed(1),
+    since_prev_s:SESSION.shots.length?((now-SESSION.lastShotMs)/1000).toFixed(1):"", result:res.ok?"success":"reject", reason:res.ok?"":res.reason,
+    floor:"", x_m:"", y_m:"", dir_deg:"", inliers:res.inliers, conf:(res.conf||0).toFixed(3), best_point:res.point||"", best_file:res.bestFile||"", proc_ms:ms,
+    route_nodes:"", route_length_m:"", instruction:"", top5:(res.top||[]).map(x=>x.file+":"+x.n).join(" "),
+    method:res.method||"", tag_id:res.tag?res.tag.id:"", tag_dist_m:res.tag?res.tag.dist.toFixed(2):"", tag_angle_deg:res.tag?res.tag.angle.toFixed(1):"", tag_side_px:res.tag?res.tag.sidePx.toFixed(0):"", tags_seen:res.tagsSeen||"" };
+  $("diag").hidden=!diagOn(); if(diagOn()) $("diag").textContent=diagText(res);
+  SESSION.lastShotMs=now;
+  if(!res.ok){ setInstr("warn",t("fail"),t("failSub"),"warn"); shot.instruction=t("fail"); pushShot(shot); return; }
+  G.est={floor:res.floor,px:res.px,dir:res.dir}; const m=toM(res.px,res.floor);
+  Object.assign(shot,{floor:res.floor,x_m:m[0].toFixed(2),y_m:m[1].toFixed(2),dir_deg:res.dir});
+  G.route=route(res.px,res.floor,G.dest.px,G.dest.floor);
+  if(!G.route){ setInstr("warn",t("noRoute"),t("noRouteSub"),"warn"); shot.instruction=t("noRoute"); pushShot(shot); viewFloor(res.floor,true); return; }
+  shot.route_nodes=G.route.path.map(n=>n.id).join(">"); shot.route_length_m=G.route.length.toFixed(1);
+  const L=legs(G.route); const here=L[0]; const remain=G.route.length;
+  const destM=toM(G.dest.px,G.dest.floor);
+  if(res.floor===G.dest.floor && Math.hypot(m[0]-destM[0],m[1]-destM[1])<=CFG.thresholds.arriveDist){
+    setInstr("flag",t("arrive"),t("arriveSub"),"ok"); shot.instruction=t("arrive"); pushShot(shot); viewFloor(res.floor,true); markArrived("auto"); return; }
+  // 進む方向（最初の区間）
+  let k=1; while(k<here.pts.length && Math.hypot(here.pts[k][0]-here.pts[0][0],here.pts[k][1]-here.pts[0][1])<3) k++;
+  const nxt=here.pts[Math.min(k,here.pts.length-1)]; const word=here.pts.length>1?turnWord(res.dir,bearing(here.pts[0],nxt)):t("ahead");
+  const d=((bearing(here.pts[0],nxt)-res.dir+540)%360)-180; const icon=Math.abs(d)<=30?"arrow":d>30&&d<150?"right":d<-30&&d>-150?"left":"back";
+  if(L.length>1){ const nf=L[1].floor; const toEv=legLen(here);
+    if(toEv<4){ setInstr("ev",t("goFloor",{f:nf}),t("goFloorSub",{f:nf})); shot.instruction=t("goFloor",{f:nf}); }
+    else { setInstr(icon,t("toEv",{dir:word}),t("toEvSub",{m:Math.round(toEv),f:nf})); shot.instruction=t("toEv",{dir:word}); } }
+  else { setInstr(icon,t("go",{dir:word}),t("goSub",{m:Math.round(remain)})); shot.instruction=word; }
+  $("hudMeta").textContent=`${G.dest.floor}・約${Math.round(remain)}m`;
+  pushShot(shot); viewFloor(res.floor,true);
+}
+
+// =====================================================================
+// セッションとログ（個人情報は記録しない。撮影画像は保存しない）
+// =====================================================================
+function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function allSessions(){ return lsGet("vpsguide_sessions",[]); }
+let dbQueue=Promise.resolve();
+function saveSession(){
+  if(!SESSION) return; const list=allSessions().filter(s=>s.id!==SESSION.id); list.push(SESSION); lsSet("vpsguide_sessions",list); lsSet("vpsguide_current",SESSION.id);
+  if(DB){ const snap=clone(SESSION); dbQueue=dbQueue.then(()=>DB.doc("sessions/"+snap.id).set(snap)).catch(e=>console.log(e)); }
+}
+function pushShot(s){ SESSION.shots.push(s); saveSession(); }
+function restoreSession(){ const id=lsGet("vpsguide_current",null); if(!id) return; const s=allSessions().find(x=>x.id===id&&!x.end); if(!s) return;
+  const b=$("btnResume"); b.hidden=false; b.textContent=`前回の続きから再開（${s.subject_id}・撮影${s.shots.length}回）`;
+  b.onclick=()=>{ SESSION=s; b.hidden=true; const d=s.dest||CFG.dests.find(x=>x.name===s.destination); if(d) startGuide(d); else { show("sDest"); renderDests(); } }; }
+function newSession(subject,cond){
+  const now=Date.now(); SESSION={id:"s"+now.toString(36), subject_id:subject, condition:cond, destination:"", start:new Date(now).toISOString(), startMs:now, lastShotMs:now, end:"", arrived:"", shots:[], mode:MODE};
+  saveSession();
+}
+function markArrived(how){ if(!SESSION||SESSION.arrived) return; SESSION.arrived=how; SESSION.arrivedAt=new Date().toISOString(); saveSession(); toast(how==="manual"?"到着を記録しました":"到着を検知しました"); }
+function endSession(){ if(SESSION){ SESSION.end=new Date().toISOString(); saveSession(); lsSet("vpsguide_current",null); } SESSION=null; G={floor:"1F",dest:null,est:null,route:null,busy:false}; $("inSubject").value=""; show("sStart"); toast("セッションを終了しました"); }
+async function allSessionsMerged(){
+  const m=new Map(allSessions().map(s=>[s.id,s]));
+  if(DB){ try{ const q=await DB.collection("sessions").get(); for(const d of q.docs) m.set(d.id,d.data()); }catch(e){} }
+  return [...m.values()].sort((a,b)=>a.startMs-b.startMs);
+}
+function csv(rows){ return "﻿"+rows.map(r=>r.map(v=>{ v=v==null?"":String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }).join(",")).join("\r\n"); }
+async function exportLogs(){
+  const ss=await allSessionsMerged(); const H=["session_id","subject_id","condition","destination","shot_no","time","since_start_s","since_prev_s","result","reason","floor","x_m","y_m","dir_deg","inliers","conf","best_point","best_file","proc_ms","route_nodes","route_length_m","instruction","top5","method","tag_id","tag_dist_m","tag_angle_deg","tag_side_px","tags_seen"];
+  const rows=[H]; for(const s of ss) for(const x of s.shots) rows.push([s.id,s.subject_id,s.condition,s.destination,...H.slice(4).map(k=>x[k])]);
+  const SH=["session_id","subject_id","condition","destination","dest_floor","dest_x_m","dest_y_m","start","end","duration_s","shots","rejects","arrived","arrived_at"];
+  const srows=[SH]; for(const s of ss){ const dur=s.end?((Date.parse(s.end)-s.startMs)/1000).toFixed(1):""; const dm=s.dest?toM(s.dest.px,s.dest.floor):null; srows.push([s.id,s.subject_id,s.condition,s.destination,s.dest?s.dest.floor:"",dm?dm[0].toFixed(2):"",dm?dm[1].toFixed(2):"",s.start,s.end,dur,s.shots.length,s.shots.filter(x=>x.result!=="success").length,s.arrived,s.arrivedAt||""]); }
+  const st=stamp(); const zip=await makeZip([[`shots_${st}.csv`,csv(rows)],[`sessions_${st}.csv`,csv(srows)]]); await saveFile(`vps_logs_${st}.zip`,zip);
+}
+const stamp=()=>new Date().toISOString().slice(0,16).replace(/[-:T]/g,"");
+async function saveFile(name,data){
+  if(DL){ try{ await DL.save({filename:name,data}); return true; }catch(e){ if(e&&e.code==="declined") return false; } }
+  const blob=data instanceof Blob?data:new Blob([data],{type:name.endsWith(".csv")?"text/csv":name.endsWith(".json")?"application/json":"application/octet-stream"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },4000); return true;
+}
+
+// =====================================================================
+// 画面遷移
+// =====================================================================
+$("btnStart").onclick=()=>{
+  const sid=$("inSubject").value.trim(); if(!sid){ $("startStatus").textContent="被験者IDを入力してください"; return; }
+  $("btnResume").hidden=true; newSession(sid,$("inCond").value);
+  if($("inCond").value==="PAPER"){ $("startStatus").textContent="紙の条件のため、開始時刻だけ記録しました。終わったら「終了」を押してください。"; renderPaperRun(); return; }
+  show("sDest"); renderDests();
+};
+function renderPaperRun(){ $("startStatus").innerHTML=""; const b=document.createElement("button"); b.className="btn"; b.style.marginTop="10px"; b.textContent="紙の条件を終了（到着）"; b.onclick=()=>{ markArrived("manual"); endSession(); b.remove(); }; $("startStatus").appendChild(b); }
+// 行き先選択：地図をタップして目的地を決める（登録済みの目的地の近くをタップするとその目的地を選ぶ）
+let DV=null, PICK=null;
+function renderDests(){
+  if(!DV){ DV=makeView($("dmap"),$("dworld"),$("dplan"),$("dov")); DV.onChange=drawPick; DV.onTap=pickTap;
+    $("dFloorBtns").innerHTML=FLOORS.slice().reverse().map(f=>`<button class="fbtn" data-f="${f}">${f}</button>`).join("");
+    $("dFloorBtns").querySelectorAll("button").forEach(b=>b.onclick=()=>pickFloor(b.dataset.f));
+    $("btnGo").onclick=()=>{ if(PICK) startGuide(PICK); }; }
+  PICK=null; $("btnGo").disabled=true; $("dIcon").innerHTML=ICON.flag; $("dText").textContent=t("pickHint"); $("dSub").textContent=t("pickHintSub");
+  setTimeout(()=>pickFloor(PICK?PICK.floor:(CFG.dests[0]?CFG.dests[0].floor:"1F")),20);
+}
+function pickFloor(f){ DV.floor=f; DV.setFloor(f); $("dFloorBtns").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.f===f));
+  const nodes=CFG.network.nodes.filter(n=>n.floor===f).map(n=>n.px).concat(CFG.dests.filter(d=>d.floor===f).map(d=>d.px));
+  if(nodes.length){ const xs=nodes.map(p=>p[0]), ys=nodes.map(p=>p[1]); DV.fit([Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)],110,175); }
+  else { const P=PLAN[f]; DV.fit([0,0,P.w,P.h],110,175); } }
+function pickTap(p){
+  const f=DV.floor; const near=CFG.dests.filter(d=>d.floor===f).find(d=>Math.hypot(d.px[0]-p[0],d.px[1]-p[1])<30/DV.s);
+  if(near){ PICK=clone(near); }
+  else { const sn=snap(p,f); if(!sn||sn.d/ppm(f)>6){ PICK=null; $("btnGo").disabled=true; $("dIcon").innerHTML=ICON.warn; $("dText").textContent=t("farFromPath"); $("dSub").textContent=t("farFromPathSub"); drawPick(); return; }
+    const m=toM(p,f); PICK={id:"T",name:t("pickedPlace"),floor:f,px:[+p[0].toFixed(1),+p[1].toFixed(1)],custom:true,label:`${f} x=${m[0].toFixed(1)} y=${m[1].toFixed(1)}`}; }
+  $("btnGo").disabled=false; $("dIcon").innerHTML=ICON.flag; $("dText").textContent=t("picked",{name:PICK.name}); $("dSub").textContent=t("pickedSub",{f:PICK.floor}); drawPick();
+}
+function drawPick(){ if(!DV) return; const f=DV.floor, s=DV.s; let h=DEFS;
+  for(const d of CFG.dests) if(d.floor===f && !(PICK&&!PICK.custom&&PICK.id===d.id)) h+=`<g transform="translate(${d.px[0]} ${d.px[1]}) scale(${1/s})"><circle r="9" fill="#2f6dff" stroke="#e9fbff" stroke-width="2"/><text x="14" y="5" font-size="13" fill="#10223a" font-weight="700" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="-apple-system,sans-serif">${esc(d.name)}</text></g>`;
+  if(PICK&&PICK.floor===f) h+=destMarker(PICK.px,s);
+  $("dov").innerHTML=h; }
+$("btnEndFromDest").onclick=()=>endSession();
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// =====================================================================
+// 管理画面
+// =====================================================================
+let AV=null, AT="dest", AF="1F", netSel=null, floorLinkFirst=null, ADMTAG={id:0,face:0}, ADMTEST=null;
+$("btnAdmin").onclick=()=>openAdmin();
+function openAdmin(){
+  show("admin");
+  if(!AV){ AV=makeView($("amap"),$("aworld"),$("aplan"),$("aov")); AV.onChange=drawAdmin; AV.onTap=adminTap;
+    document.querySelectorAll("#admin [data-at]").forEach(b=>b.onclick=()=>{ AT=b.dataset.at; netSel=null; renderAdmin(); });
+    $("admClose").onclick=()=>{ show("sStart"); };
+    $("admFloors").innerHTML=FLOORS.map(f=>`<button class="fbtn" style="width:44px;height:32px" data-af="${f}">${f}</button>`).join("");
+    $("admFloors").querySelectorAll("button").forEach(b=>b.onclick=()=>{ AF=b.dataset.af; AV.setFloor(AF); const P=PLAN[AF]; renderAdmin(); AV.fit([0,0,P.w,P.h],0,$("apanel").offsetHeight+10); }); }
+  $("amap").style.top=($("admin").querySelectorAll(".bar")[0].offsetHeight+$("admin").querySelectorAll(".bar")[1].offsetHeight)+"px";
+  AV.setFloor(AF); const P=PLAN[AF]; setTimeout(()=>{ renderAdmin(); AV.fit([0,0,P.w,P.h],0,$("apanel").offsetHeight+10); },30);
+}
+async function saveCfg(){
+  if(MODE==="claude"&&DB){ try{ await DB.doc("guide/config").set(clone(CFG)); toast("保存しました"); }catch(e){ toast("保存できませんでした"); } }
+  else { lsSet("vpsguide_cfg",CFG); toast("この端末に保存しました"); }
+}
+function renderAdmin(){
+  document.querySelectorAll("#admin [data-at]").forEach(b=>b.classList.toggle("on",b.dataset.at===AT));
+  $("admFloors").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.af===AF));
+  const P=$("apanel"); const T=CFG.thresholds;
+  const hints={tag:"地図をタップすると、選んだIDの目印をその場所に置きます",dest:"地図をタップして目的地を置きます",start:"地図をタップして紙用ルートの出発地点を置きます",net:"地点をタップして選び、別の地点をタップすると通路をつなぎます",th:"",log:"",exp:""};
+  $("admHint").textContent=hints[AT]||"";
+  if(AT==="dest"){ const d=CFG.dests[0];
+    P.innerHTML=`<p><b>目的地</b>（1か所）</p><p>${d?`${esc(d.name)}（${d.floor}・x=${toM(d.px,d.floor)[0].toFixed(1)}m, y=${toM(d.px,d.floor)[1].toFixed(1)}m）`:"未設定"}</p>
+      <div class="row"><label>名前 <input type="text" id="dName" value="${d?esc(d.name):"目的地"}" style="width:150px"></label><button class="btn small" id="dSave">名前を保存</button><button class="btn small" id="dDel">削除</button></div>`;
+    $("dSave").onclick=()=>{ if(CFG.dests[0]){ CFG.dests[0].name=$("dName").value.trim()||"目的地"; saveCfg(); renderAdmin(); } };
+    $("dDel").onclick=()=>{ CFG.dests=[]; saveCfg(); renderAdmin(); };
+  } else if(AT==="start"){ const s=CFG.start;
+    P.innerHTML=`<p><b>出発地点（紙の条件用）</b></p><p>${s?`${s.floor}・x=${toM(s.px,s.floor)[0].toFixed(1)}m, y=${toM(s.px,s.floor)[1].toFixed(1)}m`:"未設定"}</p><p class="sub">「書き出し」で、この出発地点から目的地までのルート画像（案内画面と同じ見た目）を作れます。</p>`;
+  } else if(AT==="net"){
+    P.innerHTML=`<p><b>通路ネットワーク</b>　地点 ${CFG.network.nodes.length}・通路 ${CFG.network.edges.length}</p>
+      <div class="row"><button class="btn small" id="nAdd">地点を追加モード</button><button class="btn small" id="nDel">選択中の地点を削除</button><button class="btn small" id="nLink">選択中の地点を階の接続に</button><button class="btn small" id="nReset">初期案に戻す</button></div>
+      <p class="sub">選択中：${netSel||"なし"}${floorLinkFirst?`／階の接続：${floorLinkFirst} → 別の階の地点をタップ`:""}<br>水色＝通路、点線＝階の接続（EV）。同じ2地点をもう一度つなぐと通路を削除します。</p>`;
+    $("nAdd").onclick=()=>{ netSel="__add"; renderAdmin(); };
+    $("nDel").onclick=()=>{ if(!netSel||netSel==="__add") return; CFG.network.edges=CFG.network.edges.filter(e=>e[0]!==netSel&&e[1]!==netSel); CFG.network.nodes=CFG.network.nodes.filter(n=>n.id!==netSel); netSel=null; saveCfg(); renderAdmin(); };
+    $("nLink").onclick=()=>{ if(!netSel||netSel==="__add") return; floorLinkFirst=netSel; toast("別の階に切り替えて、つなぐ地点をタップ"); renderAdmin(); };
+    $("nReset").onclick=()=>{ CFG.network=clone(DEFAULT_CFG.network); netSel=null; saveCfg(); renderAdmin(); };
+  } else if(AT==="tag"){
+    const tags=CFG.tags||(CFG.tags=[]); const fl=[["0","上"],["45","右上"],["90","右"],["135","右下"],["180","下"],["225","左下"],["270","左"],["315","左上"]];
+    P.innerHTML=`<p><b>人工ランドマーク（AprilTag 36h11）</b>　登録 ${tags.length}枚</p>
+      <div style="max-height:84px;overflow:auto;font-size:12px">${tags.map(t=>{ const m=toM(t.px,t.floor); return `ID${t.id}　${t.floor}・x=${m[0].toFixed(1)}, y=${m[1].toFixed(1)}m・面の向き${t.face}° <button class="btn small" data-tdel="${t.id}" style="padding:2px 8px">削除</button>`; }).join("<br>")||"未登録"}</div>
+      <div class="row"><label>ID <input type="number" id="tgId" min="0" value="${ADMTAG.id}" style="width:56px"></label><label>面が向く方向（図面上） <select id="tgFace" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:6px">${fl.map(([v,l])=>`<option value="${v}"${+v===ADMTAG.face?" selected":""}>${l}（${v}°）</option>`).join("")}</select></label></div>
+      <div class="row"><label>一辺(m) <input type="number" step="0.01" id="tgSz" value="${CFG.tagSize}" style="width:64px"></label><label>焦点距離(35mm換算) <input type="number" id="tgF" value="${CFG.f35}" style="width:56px"></label><label>使う最大距離(m) <input type="number" id="tgMax" value="${CFG.tagMaxDist}" style="width:56px"></label><button class="btn small" id="tgSave">保存</button></div>
+      <div class="row"><label><input type="checkbox" id="tgDiag"${diagOn()?" checked":""}> 案内画面に診断表示（実験者向け）</label><button class="btn small" id="tgTest">写真で目印を試す</button></div>
+      <p class="sub" id="tgRes" style="white-space:pre-line">${ADMTEST?esc(ADMTEST.text):"面が向く方向＝目印の正面が向いている方向（例：図面の下側の通路から見る目印なら「下」）。"}</p>`;
+    $("tgId").onchange=()=>{ ADMTAG.id=Math.max(0,parseInt($("tgId").value)||0); };
+    $("tgFace").onchange=()=>{ ADMTAG.face=+$("tgFace").value; const t=tags.find(x=>x.id===ADMTAG.id); if(t){ t.face=ADMTAG.face; saveCfg(); renderAdmin(); } };
+    P.querySelectorAll("[data-tdel]").forEach(b=>b.onclick=()=>{ CFG.tags=tags.filter(t=>t.id!==+b.dataset.tdel); saveCfg(); renderAdmin(); });
+    $("tgSave").onclick=()=>{ CFG.tagSize=+$("tgSz").value||0.16; CFG.f35=+$("tgF").value||28; CFG.tagMaxDist=+$("tgMax").value||12; saveCfg(); };
+    $("tgDiag").onchange=()=>{ lsSet("vpsguide_diag",$("tgDiag").checked); toast($("tgDiag").checked?"診断表示：オン":"診断表示：オフ"); };
+    $("tgTest").onclick=()=>{ let fi=$("tgFile"); if(!fi){ fi=document.createElement("input"); fi.type="file"; fi.accept="image/*"; fi.capture="environment"; fi.id="tgFile"; fi.hidden=true; document.body.appendChild(fi);
+        fi.onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; $("tgRes").textContent="検出中…"; const t0=performance.now();
+          let ps=[]; try{ ps=await detectTagsInFile(f); }catch(err){ $("tgRes").textContent="エラー："+(err.message||err); return; }
+          const ms=Math.round(performance.now()-t0);
+          ADMTEST={ps, text:ps.length?ps.map(p=>`ID${p.id}：距離${p.dist.toFixed(2)}m・正面から${p.angle>=0?"右":"左"}${Math.abs(p.angle).toFixed(0)}°・一辺${p.sidePx.toFixed(0)}画素`+(p.reg?`\n　→ 推定位置 ${p.floor} x=${toM(p.px,p.floor)[0].toFixed(2)} y=${toM(p.px,p.floor)[1].toFixed(2)}m・向き${Math.round(p.dir)}°`:"（未登録）")).join("\n")+`\n（${ms}ms）`:`目印が見つかりませんでした（${ms}ms）`};
+          const r=ps.find(p=>p.reg); if(r&&r.floor!==AF){ AF=r.floor; AV.setFloor(AF); }
+          renderAdmin(); }; }
+      fi.click(); };
+  } else if(AT==="th"){
+    P.innerHTML=`<p><b>推定のしきい値</b>　誤った位置を出さないことを優先します。</p>
+      <div class="row"><label>最小一致点 <input type="number" id="tIn" value="${T.minInliers}"></label><label>最小信頼度 <input type="number" step="0.05" id="tCf" value="${T.minConf}"></label></div>
+      <div class="row"><label>別候補とみなす距離(m) <input type="number" id="tRv" value="${T.rivalDist}"></label><label>到着判定(m) <input type="number" id="tAr" value="${T.arriveDist}"></label></div>
+      <div class="row"><button class="btn small" id="tSave">保存</button></div>
+      <p class="sub">信頼度＝1−（「別候補とみなす距離」以上離れた場所の最大一致点 ÷ 1位の一致点）。どちらかが基準未満なら「位置を特定できません」と表示します。</p>`;
+    $("tSave").onclick=()=>{ Object.assign(CFG.thresholds,{minInliers:+$("tIn").value,minConf:+$("tCf").value,rivalDist:+$("tRv").value,arriveDist:+$("tAr").value}); saveCfg(); };
+  } else if(AT==="log"){
+    P.innerHTML=`<p><b>実験ログ</b></p><p id="logSum">集計中…</p><div class="row"><button class="btn small" id="lExp">ログを書き出し（CSV×2をZIPで）</button></div><p class="sub">記録項目：被験者ID・条件・目的地・撮影時刻・推定結果（階・x・y・向き）・一致点・信頼度・成功/失敗・処理時間・表示したルート・再撮影の間隔。撮影画像は保存しません。</p>`;
+    allSessionsMerged().then(ss=>{ const n=ss.reduce((a,s)=>a+s.shots.length,0); $("logSum").textContent=`セッション ${ss.length}件／撮影 ${n}回`; });
+    $("lExp").onclick=()=>exportLogs();
+  } else if(AT==="exp"){
+    P.innerHTML=`<p><b>書き出し</b></p><div class="row"><button class="btn small" id="ePaper">紙用ルート画像（PNG）</button>${MODE==="claude"?'<button class="btn small" id="ePkg">HTML版パッケージ（ZIP）</button>':'<button class="btn small" id="eCfg">設定（station.json）</button>'}</div>
+      <p class="sub">${MODE==="claude"?"HTML版パッケージには、案内アプリ・画像処理エンジン・辞書・構内図・設定がすべて入ります。展開してHTTPSのサーバー（GitHub Pagesなど）に置けば、Claudeなしで動きます。":"この端末で変更した設定を station.json として書き出せます。サーバーの station.json と差し替えると全端末に反映されます。"}</p><p id="eMsg" class="sub"></p>`;
+    $("ePaper").onclick=()=>exportPaper();
+    if($("ePkg")) $("ePkg").onclick=()=>exportPackage();
+    if($("eCfg")) $("eCfg").onclick=()=>saveFile("station.json",JSON.stringify(stationJson()));
+  }
+  drawAdmin();
+}
+function adminTap(p){
+  if(AT==="tag"){ const tags=CFG.tags||(CFG.tags=[]); const o=tags.find(t=>t.id===ADMTAG.id); const rec={id:ADMTAG.id,floor:AF,px:[+p[0].toFixed(1),+p[1].toFixed(1)],face:o&&o.floor===AF?o.face:ADMTAG.face};
+    if(o) Object.assign(o,rec); else tags.push(rec); tags.sort((a,b)=>a.id-b.id); ADMTAG.face=rec.face; saveCfg(); renderAdmin(); return; }
+  if(AT==="dest"){ const nm=(CFG.dests[0]&&CFG.dests[0].name)||"目的地"; CFG.dests=[{id:"D1",name:nm,floor:AF,px:[+p[0].toFixed(1),+p[1].toFixed(1)]}]; saveCfg(); renderAdmin(); return; }
+  if(AT==="start"){ CFG.start={floor:AF,px:[+p[0].toFixed(1),+p[1].toFixed(1)]}; saveCfg(); renderAdmin(); return; }
+  if(AT!=="net") return;
+  const hitR=22/AV.s; const hit=CFG.network.nodes.filter(n=>n.floor===AF).find(n=>Math.hypot(n.px[0]-p[0],n.px[1]-p[1])<hitR);
+  if(netSel==="__add"){ if(!hit){ let i=1; while(nodeById("N"+i)) i++; CFG.network.nodes.push({id:"N"+i,floor:AF,px:[+p[0].toFixed(1),+p[1].toFixed(1)]}); netSel="N"+i; saveCfg(); } else netSel=hit.id; renderAdmin(); return; }
+  if(!hit){ netSel=null; renderAdmin(); return; }
+  if(floorLinkFirst&&nodeById(floorLinkFirst).floor!==AF){ CFG.network.edges.push([floorLinkFirst,hit.id,"floor"]); nodeById(floorLinkFirst).kind="ev"; hit.kind="ev"; floorLinkFirst=null; netSel=null; saveCfg(); renderAdmin(); return; }
+  if(netSel&&netSel!==hit.id){ const i=CFG.network.edges.findIndex(e=>(e[0]===netSel&&e[1]===hit.id)||(e[1]===netSel&&e[0]===hit.id));
+    if(i>=0) CFG.network.edges.splice(i,1); else CFG.network.edges.push([netSel,hit.id]); netSel=hit.id; saveCfg(); renderAdmin(); return; }
+  netSel=hit.id; renderAdmin();
+}
+function drawAdmin(){
+  if(!AV) return; const s=AV.s; let h=DEFS;
+  for(const [a,b,type] of CFG.network.edges){ const A=nodeById(a),B=nodeById(b); if(!A||!B) continue;
+    if(type==="floor"){ for(const n of [A,B]) if(n.floor===AF) h+=evMarker(n.px,s); continue; }
+    if(A.floor!==AF) continue; h+=`<line x1="${A.px[0]}" y1="${A.px[1]}" x2="${B.px[0]}" y2="${B.px[1]}" stroke="#1f5fd6" stroke-opacity=".8" stroke-width="3" vector-effect="non-scaling-stroke"/>`; }
+  for(const n of CFG.network.nodes) if(n.floor===AF){ const sel=n.id===netSel; h+=`<circle cx="${n.px[0]}" cy="${n.px[1]}" r="${(sel?9:6)/s}" fill="${sel?"#ffb86b":"#e9fbff"}" stroke="#2f6dff" stroke-width="${2/s}"/><text x="${n.px[0]+10/s}" y="${n.px[1]-8/s}" font-size="${11/s}" fill="#1a3550" font-family="-apple-system,sans-serif">${n.id}</text>`; }
+  for(const d of CFG.dests) if(d.floor===AF) h+=destMarker(d.px,s);
+  if(CFG.start&&CFG.start.floor===AF) h+=youMarker(CFG.start.px,0,s,false);
+  for(const t of (CFG.tags||[])) if(t.floor===AF) h+=tagMarker(t,s,AT==="tag"&&t.id===ADMTAG.id);
+  if(AT==="tag"&&ADMTEST) for(const p of ADMTEST.ps) if(p.reg&&p.floor===AF) h+=youMarker(p.px,p.dir,s);
+  if((AT==="start"||AT==="exp")&&CFG.start&&CFG.dests[0]){ const r=route(CFG.start.px,CFG.start.floor,CFG.dests[0].px,CFG.dests[0].floor); if(r) for(const l of legs(r)) if(l.floor===AF) h+=routeSvg(l.pts); }
+  $("aov").innerHTML=h;
+}
+// 目印：四角＋正面方向の矢印（図面の上＝0°、時計回り）
+function tagMarker(t,s,sel){ const a=t.face*Math.PI/180, dx=Math.sin(a), dy=-Math.cos(a);
+  return `<g transform="translate(${t.px[0]} ${t.px[1]}) scale(${1/s})"><line x1="0" y1="0" x2="${dx*26}" y2="${dy*26}" stroke="#d33" stroke-width="2.5"/><circle cx="${dx*26}" cy="${dy*26}" r="3.5" fill="#d33"/><rect x="-8" y="-8" width="16" height="16" fill="#111" stroke="${sel?"#ffb86b":"#fff"}" stroke-width="${sel?3:1.5}"/><text x="11" y="-10" font-size="12" font-weight="700" fill="#b00" font-family="-apple-system,sans-serif">T${t.id}</text></g>`; }
+function stationJson(){ return {version:1, station:"スマートステーション", cal:BASE.cal, points:BASE.points, refs:BASE.refs.map(r=>({file:r.file,point:r.point,floor:r.floor,px:r.px,dir:r.dir})), guide:CFG}; }
+
+// 紙用ルート画像：案内画面と同じ色・線で描く
+async function exportPaper(){
+  const d=CFG.dests[0], s0=CFG.start; if(!d||!s0) return toast("出発地点と目的地を設定してください");
+  const r=route(s0.px,s0.floor,d.px,d.floor); if(!r) return toast("ルートが見つかりません");
+  const out=[];
+  for(const l of legs(r)){ const P=PLAN[l.floor]; const xs=l.pts.map(p=>p[0]).concat([s0.floor===l.floor?s0.px[0]:l.pts[0][0], d.floor===l.floor?d.px[0]:l.pts[0][0]]); const ys=l.pts.map(p=>p[1]).concat([s0.floor===l.floor?s0.px[1]:l.pts[0][1], d.floor===l.floor?d.px[1]:l.pts[0][1]]);
+    const m=260; const x0=Math.max(0,Math.min(...xs)-m), y0=Math.max(0,Math.min(...ys)-m), x1=Math.min(P.w,Math.max(...xs)+m), y1=Math.min(P.h,Math.max(...ys)+m);
+    const c=document.createElement("canvas"); c.width=x1-x0; c.height=y1-y0+90; const x=c.getContext("2d"); x.fillStyle="#ffffff"; x.fillRect(0,0,c.width,c.height);
+    x.drawImage(P.canvas,x0,y0,x1-x0,y1-y0,0,90,x1-x0,y1-y0);
+    x.fillStyle="#1a1a1a"; x.font="700 26px -apple-system,sans-serif"; x.fillText(`${l.floor}　${d.name}までのルート`,24,56);
+    x.translate(-x0,-y0+90); x.lineJoin="round"; x.lineCap="round";
+    const path=()=>{ x.beginPath(); l.pts.forEach((p,i)=>i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1])); };
+    path(); x.strokeStyle="rgba(47,109,255,.28)"; x.lineWidth=26; x.stroke(); path(); x.strokeStyle="#2f6dff"; x.lineWidth=11; x.stroke(); path(); x.setLineDash([4,18]); x.strokeStyle="#ffffff"; x.lineWidth=6; x.stroke(); x.setLineDash([]);
+    for(const n of r.path) if(n.kind==="ev"&&n.floor===l.floor){ x.fillStyle="#1a1a1a"; x.strokeStyle="#ffffff"; x.lineWidth=3; x.fillRect(n.px[0]-28,n.px[1]-28,56,56); x.strokeRect(n.px[0]-28,n.px[1]-28,56,56); x.fillStyle="#ffffff"; x.font="700 26px -apple-system,sans-serif"; x.textAlign="center"; x.fillText("EV",n.px[0],n.px[1]+9); x.textAlign="left"; }
+    if(s0.floor===l.floor){ x.fillStyle="#e9fbff"; x.beginPath(); x.arc(s0.px[0],s0.px[1],20,0,7); x.fill(); x.fillStyle="#2f6dff"; x.beginPath(); x.arc(s0.px[0],s0.px[1],13,0,7); x.fill(); x.fillStyle="#1a1a1a"; x.font="700 24px -apple-system,sans-serif"; x.fillText("スタート",s0.px[0]+28,s0.px[1]+8); }
+    if(d.floor===l.floor){ x.fillStyle="#2f6dff"; x.strokeStyle="#ffffff"; x.lineWidth=4; x.fillRect(d.px[0]-24,d.px[1]-24,48,48); x.strokeRect(d.px[0]-24,d.px[1]-24,48,48); x.fillStyle="#1a1a1a"; x.font="700 24px -apple-system,sans-serif"; x.fillText(d.name,d.px[0]+34,d.px[1]+8); }
+    out.push(c); }
+  const W=Math.max(...out.map(c=>c.width)), H=out.reduce((a,c)=>a+c.height,0); const all=document.createElement("canvas"); all.width=W; all.height=H; const ax=all.getContext("2d"); ax.fillStyle="#ffffff"; ax.fillRect(0,0,W,H);
+  let y=0; for(const c of out){ ax.drawImage(c,0,y); y+=c.height; }
+  const blob=await new Promise(r=>all.toBlob(r,"image/png")); await saveFile(`route_paper_${stamp()}.png`,blob);
+}
+
+// HTML版パッケージ（Claude上でのみ）：案内アプリ＋エンジン＋辞書＋構内図＋設定
+const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+async function makeZip(files){ const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  for(const [name,data] of files){ const nb=enc.encode(name); const u8=typeof data==="string"?enc.encode(data):new Uint8Array(await data.arrayBuffer()); const crc=crc32(u8);
+    const h=new DataView(new ArrayBuffer(30)); h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint32(14,crc,true); h.setUint32(18,u8.length,true); h.setUint32(22,u8.length,true); h.setUint16(26,nb.length,true);
+    parts.push(h.buffer,nb,u8);
+    const c=new DataView(new ArrayBuffer(46)); c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true); c.setUint32(16,crc,true); c.setUint32(20,u8.length,true); c.setUint32(24,u8.length,true); c.setUint16(28,nb.length,true); c.setUint32(42,off,true);
+    central.push(c.buffer,nb); off+=30+nb.length+u8.length; }
+  const csize=central.reduce((a,b)=>a+(b.byteLength||b.length),0);
+  const e=new DataView(new ArrayBuffer(22)); e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true); e.setUint32(12,csize,true); e.setUint32(16,off,true);
+  return new Blob([...parts,...central,e.buffer],{type:"application/zip"}); }
+async function exportPackage(){
+  const msg=m=>{ if($("eMsg")) $("eMsg").textContent=m; };
+  try{
+    msg("案内アプリを準備中…"); const html=await (await fetch("guide.html",{cache:"no-store"})).text();
+    msg("画像処理エンジンを準備中…"); const ocv=await (await fetch("opencv.js")).blob();
+    msg("構内図を準備中…"); const p1=await (await fetch("plans/1F.png")).blob(), p3=await (await fetch("plans/3F.png")).blob();
+    msg("辞書を準備中…"); const dict=JSON.stringify({v:1,created:new Date().toISOString(),items:DICT.map(e=>e.raw)});
+    const readme="VPS案内（スマステ）HTML版\r\n\r\n【GitHub Pagesでの公開手順】\r\n1. GitHubで新しいリポジトリを作る\r\n2. このZIPを展開した中身（index.html・opencv.js・dict.json・station.json・plansフォルダ・.nojekyll）をすべてアップロードする\r\n3. Settings → Pages → Branch を main ／ (root) にして Save\r\n4. 数分後に表示されるアドレスを、iPhoneのSafariで開く\r\n\r\n・このフォルダの中身をそのまま、HTTPS（暗号化通信）で配信できるサーバー（GitHub Pages など）に置いてください。\r\n・iPhoneのSafariで index.html を開きます。カメラを使うためHTTPSが必要です（ファイルを直接開く方法では動きません）。\r\n・ログはその端末のブラウザ内に保存されます。実験後は管理→ログ→CSV書き出しで必ず取り出してください。\r\n・構内図と辞書が含まれます。公開範囲に注意してください。\r\n";
+    msg("ZIPを作成中…"); const zip=await makeZip([["index.html",html],["opencv.js",ocv],["dict.json",dict],["station.json",JSON.stringify(stationJson())],["plans/1F.png",p1],["plans/3F.png",p3],["README.txt",readme],[".nojekyll",""]]);
+    msg(`書き出し中…（${(zip.size/1048576).toFixed(1)}MB）`); await saveFile(`vps_guide_html_${stamp()}.zip`,zip); msg("書き出しました");
+  }catch(e){ msg("書き出しに失敗しました："+(e.message||e)); }
+}
+
+init().catch(e=>{ boot("起動に失敗しました："+(e.message||e)); console.error(e); });
+</script>
+</body>
+</html>
