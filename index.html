@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#05080d">
-<title>VPS案内（スマステ）</title>
+<title>VPS＋人工ランドマーク案内（スマステ）</title>
 <style>
   :root{
     --cyan:#5fe1ff; --cyan-soft:rgba(95,225,255,.45); --tile:#2f6dff;
@@ -188,7 +188,7 @@
 // 文言（言語ごとに差し替え可能。将来の母国語対応用）
 // =====================================================================
 const STR = { ja: {
-  appTitle:"VPS案内（スマステ）", startLead:"実験者が入力します。氏名などの個人情報は入力しないでください。",
+  appTitle:"VPS＋人工ランドマーク案内（スマステ）", startLead:"実験者が入力します。氏名などの個人情報は入力しないでください。",
   subjectId:"被験者ID", condition:"条件", condVps:"VPS案内", condPaper:"紙の構内図",
   startBtn:"開始", admin:"案内の設定", recorder:"ホームへ", chooseDest:"行き先を選んでください", chooseDestLead:"地図上の行きたい場所をタップ", goHere:"ここへ案内する", pickHint:"地図をタップして行き先を選んでください", pickHintSub:"2本指で拡大、右上で階を切り替えできます。", picked:"{name}", pickedSub:"{f}・この場所へ案内します", farFromPath:"通路から離れた場所です", farFromPathSub:"通路の近くをタップしてください。", pickedPlace:"選んだ場所",
   shoot:"屋内測位（撮影）", recenter:"全体表示", arrived:"到着", endSession:"終了",
@@ -265,7 +265,7 @@ async function init(){
   } else {
     BASE={cal:station.cal, points:station.points, refs:station.refs};
     CFG=mergeCfg(station.guide||{});
-    try{ const o=localStorage.getItem("vpsguide_cfg"); if(o) CFG=mergeCfg(JSON.parse(o)); }catch(e){}
+    try{ const o=localStorage.getItem("vpslmguide_cfg"); if(o) CFG=mergeCfg(JSON.parse(o)); }catch(e){}
   }
   boot("構内図を準備中…");
   for(const f of FLOORS) PLAN[f]=await darkPlan("plans/"+f+".png");
@@ -417,7 +417,7 @@ async function locate(blob){
   if(use) return {ok:true, method:"tag", floor:use.floor, px:use.px, dir:Math.round(use.dir), conf:1, inliers:"", top:[], tag:use, tagsSeen:seen};
   const r=await estimate(blob); return {...r, method:"vps", tagsSeen:seen};
 }
-function diagOn(){ return !!lsGet("vpsguide_diag",false); }
+function diagOn(){ return !!lsGet("vpslmguide_diag",false); }
 function diagText(res){
   const a=[];
   if(res.method==="tag"){ const p=res.tag; a.push(`目印 ID${p.id}・距離${p.dist.toFixed(1)}m・正面から${p.angle>=0?"右":"左"}${Math.abs(p.angle).toFixed(0)}°・一辺${p.sidePx.toFixed(0)}画素`); }
@@ -620,14 +620,14 @@ function renderModeRow(a){
 // =====================================================================
 function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
-function allSessions(){ return lsGet("vpsguide_sessions",[]); }
+function allSessions(){ return lsGet("vpslmguide_sessions",[]); }
 let dbQueue=Promise.resolve();
 function saveSession(){
-  if(!SESSION) return; const list=allSessions().filter(s=>s.id!==SESSION.id); list.push(SESSION); lsSet("vpsguide_sessions",list); lsSet("vpsguide_current",SESSION.id);
+  if(!SESSION) return; const list=allSessions().filter(s=>s.id!==SESSION.id); list.push(SESSION); lsSet("vpslmguide_sessions",list); lsSet("vpslmguide_current",SESSION.id);
   if(DB){ const snap=clone(SESSION); dbQueue=dbQueue.then(()=>DB.doc("sessions/"+snap.id).set(snap)).catch(e=>console.log(e)); }
 }
 function pushShot(s){ SESSION.shots.push(s); saveSession(); }
-function restoreSession(){ const id=lsGet("vpsguide_current",null); if(!id) return; const s=allSessions().find(x=>x.id===id&&!x.end); if(!s) return;
+function restoreSession(){ const id=lsGet("vpslmguide_current",null); if(!id) return; const s=allSessions().find(x=>x.id===id&&!x.end); if(!s) return;
   const b=$("btnResume"); b.hidden=false; b.textContent=`前回の続きから再開（${s.subject_id}・撮影${s.shots.length}回）`;
   b.onclick=()=>{ SESSION=s; b.hidden=true; const d=s.dest||CFG.dests.find(x=>x.name===s.destination); if(d) startGuide(d); else { show("sDest"); renderDests(); } }; }
 function newSession(subject,cond){
@@ -635,7 +635,7 @@ function newSession(subject,cond){
   saveSession();
 }
 function markArrived(how){ if(!SESSION||SESSION.arrived) return; SESSION.arrived=how; SESSION.arrivedAt=new Date().toISOString(); saveSession(); toast(how==="manual"?"到着を記録しました":"到着を検知しました"); }
-function endSession(){ if(SESSION){ SESSION.end=new Date().toISOString(); saveSession(); lsSet("vpsguide_current",null); } SESSION=null; G={floor:"1F",dest:null,est:null,route:null,busy:false}; $("inSubject").value=""; show("sStart"); toast("セッションを終了しました"); }
+function endSession(){ if(SESSION){ SESSION.end=new Date().toISOString(); saveSession(); lsSet("vpslmguide_current",null); } SESSION=null; G={floor:"1F",dest:null,est:null,route:null,busy:false}; $("inSubject").value=""; show("sStart"); toast("セッションを終了しました"); }
 async function allSessionsMerged(){
   const m=new Map(allSessions().map(s=>[s.id,s]));
   if(DB){ try{ const q=await DB.collection("sessions").get(); for(const d of q.docs) m.set(d.id,d.data()); }catch(e){} }
@@ -712,7 +712,7 @@ function openAdmin(){
 }
 async function saveCfg(){
   if(MODE==="claude"&&DB){ try{ await DB.doc("guide/config").set(clone(CFG)); toast("保存しました"); }catch(e){ toast("保存できませんでした"); } }
-  else { lsSet("vpsguide_cfg",CFG); toast("この端末に保存しました"); }
+  else { lsSet("vpslmguide_cfg",CFG); toast("この端末に保存しました"); }
 }
 function renderAdmin(){
   document.querySelectorAll("#admin [data-at]").forEach(b=>b.classList.toggle("on",b.dataset.at===AT));
@@ -748,7 +748,7 @@ function renderAdmin(){
     $("tgFace").onchange=()=>{ ADMTAG.face=+$("tgFace").value; const t=tags.find(x=>x.id===ADMTAG.id); if(t){ t.face=ADMTAG.face; saveCfg(); renderAdmin(); } };
     P.querySelectorAll("[data-tdel]").forEach(b=>b.onclick=()=>{ CFG.tags=tags.filter(t=>t.id!==+b.dataset.tdel); saveCfg(); renderAdmin(); });
     $("tgSave").onclick=()=>{ CFG.tagSize=+$("tgSz").value||0.16; CFG.f35=+$("tgF").value||28; CFG.tagMaxDist=+$("tgMax").value||12; saveCfg(); };
-    $("tgDiag").onchange=()=>{ lsSet("vpsguide_diag",$("tgDiag").checked); toast($("tgDiag").checked?"診断表示：オン":"診断表示：オフ"); };
+    $("tgDiag").onchange=()=>{ lsSet("vpslmguide_diag",$("tgDiag").checked); toast($("tgDiag").checked?"診断表示：オン":"診断表示：オフ"); };
     $("tgTest").onclick=()=>{ let fi=$("tgFile"); if(!fi){ fi=document.createElement("input"); fi.type="file"; fi.accept="image/*"; fi.capture="environment"; fi.id="tgFile"; fi.hidden=true; document.body.appendChild(fi);
         fi.onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; $("tgRes").textContent="検出中…"; const t0=performance.now();
           let ps=[]; try{ ps=await detectTagsInFile(f); }catch(err){ $("tgRes").textContent="エラー："+(err.message||err); return; }
@@ -851,7 +851,7 @@ async function exportPackage(){
     msg("画像処理エンジンを準備中…"); const ocv=await (await fetch("opencv.js")).blob();
     msg("構内図を準備中…"); const p1=await (await fetch("plans/1F.png")).blob(), p3=await (await fetch("plans/3F.png")).blob();
     msg("辞書を準備中…"); const dict=JSON.stringify({v:1,created:new Date().toISOString(),items:DICT.map(e=>e.raw)});
-    const readme="VPS案内（スマステ）HTML版\r\n\r\n【GitHub Pagesでの公開手順】\r\n1. GitHubで新しいリポジトリを作る\r\n2. このZIPを展開した中身（index.html・opencv.js・dict.json・station.json・plansフォルダ・.nojekyll）をすべてアップロードする\r\n3. Settings → Pages → Branch を main ／ (root) にして Save\r\n4. 数分後に表示されるアドレスを、iPhoneのSafariで開く\r\n\r\n・このフォルダの中身をそのまま、HTTPS（暗号化通信）で配信できるサーバー（GitHub Pages など）に置いてください。\r\n・iPhoneのSafariで index.html を開きます。カメラを使うためHTTPSが必要です（ファイルを直接開く方法では動きません）。\r\n・ログはその端末のブラウザ内に保存されます。実験後は管理→ログ→CSV書き出しで必ず取り出してください。\r\n・構内図と辞書が含まれます。公開範囲に注意してください。\r\n";
+    const readme="VPS＋人工ランドマーク案内（スマステ）HTML版\r\n\r\n【GitHub Pagesでの公開手順】\r\n1. GitHubで新しいリポジトリを作る\r\n2. このZIPを展開した中身（index.html・opencv.js・dict.json・station.json・plansフォルダ・.nojekyll）をすべてアップロードする\r\n3. Settings → Pages → Branch を main ／ (root) にして Save\r\n4. 数分後に表示されるアドレスを、iPhoneのSafariで開く\r\n\r\n・このフォルダの中身をそのまま、HTTPS（暗号化通信）で配信できるサーバー（GitHub Pages など）に置いてください。\r\n・iPhoneのSafariで index.html を開きます。カメラを使うためHTTPSが必要です（ファイルを直接開く方法では動きません）。\r\n・ログはその端末のブラウザ内に保存されます。実験後は管理→ログ→CSV書き出しで必ず取り出してください。\r\n・構内図と辞書が含まれます。公開範囲に注意してください。\r\n";
     msg("ZIPを作成中…"); const zip=await makeZip([["index.html",html],["opencv.js",ocv],["dict.json",dict],["station.json",JSON.stringify(stationJson())],["plans/1F.png",p1],["plans/3F.png",p3],["README.txt",readme],[".nojekyll",""]]);
     msg(`書き出し中…（${(zip.size/1048576).toFixed(1)}MB）`); await saveFile(`vps_guide_html_${stamp()}.zip`,zip); msg("書き出しました");
   }catch(e){ msg("書き出しに失敗しました："+(e.message||e)); }
